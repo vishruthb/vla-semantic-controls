@@ -10,3 +10,4 @@ results/*.log
 *.pt
 *.pth
 *.ckpt
+outputs/

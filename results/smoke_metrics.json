@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "started_at_utc": "2026-08-27T04:50:02.781841+00:00",
+  "completed_at_utc": "2026-08-27T04:52:30.271648+00:00",
+  "target": {
+    "description": "Reproduce the unmodified SmolVLA checkpoint on LIBERO-Spatial",
+    "reference_success_percent": 81.5,
+    "material_difference_percentage_points": 5.0
+  },
+  "result": {
+    "overall_success_percent": 50.0,
+    "successes": 1,
+    "episodes": 2,
+    "per_task": [
+      {
+        "task_id": 0,
+        "language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+        "successes": 1,
+        "episodes": 2,
+        "success_percent": 50.0,
+        "episode_outcomes": [
+          true,
+          false
+        ]
+      }
+    ]
+  },
+  "timing": {
+    "evaluation_seconds": 139.86156215297524,
+    "wall_seconds": 147.3710718070506,
+    "seconds_per_episode": 69.93078107648762,
+    "policy_latency_ms": {
+      "scope": "select_action wall time including CUDA synchronization",
+      "batch_size": 2,
+      "samples": 280,
+      "mean": 107.92454504595038,
+      "median": 104.66670198366046,
+      "p95": 114.4285670015961,
+      "min": 93.898524006363,
+      "max": 853.7909819860943
+    }
+  },
+  "vram": {
+    "nvidia_smi_baseline_mib": 4,
+    "nvidia_smi_peak_mib": 1908,
+    "torch_peak_allocated_mib": 1251.48291015625,
+    "torch_peak_reserved_mib": 1298.0
+  },
+  "eval_settings": {
+    "suite": "libero_spatial",
+    "task_ids": [
+      0
+    ],
+    "episodes_per_task": 2,
+    "episode_length": 280,
+    "batch_size": 2,
+    "use_async_envs": true,
+    "max_parallel_tasks": 1,
+    "seed": 1000,
+    "control_mode": "relative",
+    "init_states": true,
+    "observation_height": 360,
+    "observation_width": 360,
+    "camera_name": "agentview_image,robot0_eye_in_hand_image",
+    "obs_type": "pixels_agent_pos",
+    "render_backend": "osmesa",
+    "render_episodes_per_task": 1,
+    "num_steps": 1,
+    "n_action_steps": 1,
+    "use_amp": false,
+    "device": "cuda",
+    "torch_allow_tf32": true,
+    "cudnn_benchmark": true
+  },
+  "revisions": {
+    "checkpoint": "HuggingFaceVLA/smolvla_libero@6721902bc4d61e50a3bfdb11dfb4cb626f05d102",
+    "backbone": "HuggingFaceTB/SmolVLM2-500M-Instruct@7b375e1b73b11138ff12fe22c8f2822d8fe03467",
+    "libero_assets": "lerobot/libero-assets@0b3ea86be5fe169d0fd036ae63d1070ec09e90f6",
+    "lerobot": "https://github.com/huggingface/lerobot.git@8515d456be1dbef8c133f07188c785e683eca899",
+    "repo": null,
+    "model_sha256": "71d9563c8295284acba8fc2d5c19de000d6fe9ba58a406832af7ef3d221ed52f",
+    "uv_lock_sha256": "a0bda71d5fc3e46a4383669b46a1166c1b47eac1e7f6f2b3c75dd648f193714e"
+  },
+  "packages": {
+    "accelerate": "1.14.0",
+    "draccus": "0.10.0",
+    "gymnasium": "1.3.0",
+    "hf-libero": "0.1.4",
+    "huggingface-hub": "1.28.0",
+    "lerobot": "0.5.2",
+    "mujoco": "3.3.2",
+    "numpy": "2.2.6",
+    "opencv-python-headless": "4.13.0.92",
+    "robosuite": "1.4.0",
+    "safetensors": "0.8.0",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "transformers": "5.5.4"
+  },
+  "system": {
+    "python": "3.12.3",
+    "platform": "Linux-6.8.0-117-generic-x86_64-with-glibc2.39",
+    "gpu": "NVIDIA GeForce RTX 5090, 580.159.04, 32607",
+    "cuda_runtime": "12.8",
+    "cudnn": 91900,
+    "renderer": {
+      "MUJOCO_GL": "osmesa",
+      "PYOPENGL_PLATFORM": "osmesa"
+    }
+  },
+  "diagnostics": {
+    "target_comparison_applicable": false,
+    "material_difference": false,
+    "difference_percentage_points": -31.5,
+    "threshold_percentage_points": 5.0,
+    "differences_from_reference": [
+      "The 81.5% comparison is a reproduction target, not an asserted deterministic output.",
+      "The pinned LeRobot path reuses simulator instances between episodes; it does not expose the newer hard_reset option.",
+      "The backbone config is loaded from an exact local Hub snapshot instead of resolving the repository's moving main branch.",
+      "Instrumentation synchronizes CUDA around select_action; this changes timing but not actions."
+    ]
+  },
+  "raw_lerobot_metrics": {
+    "per_task": [
+      {
+        "task_group": "libero_spatial",
+        "task_id": 0,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            0.0
+          ],
+          "max_rewards": [
+            1.0,
+            0.0
+          ],
+          "successes": [
+            true,
+            false
+          ],
+          "video_paths": [
+            "/workspace/vla-semantic-controls/results/raw/smoke_metrics/videos/libero_spatial_0/eval_episode_0.mp4"
+          ]
+        }
+      }
+    ],
+    "per_group": {
+      "libero_spatial": {
+        "avg_sum_reward": 0.5,
+        "avg_max_reward": 0.5,
+        "pc_success": 50.0,
+        "n_episodes": 2,
+        "video_paths": [
+          "/workspace/vla-semantic-controls/results/raw/smoke_metrics/videos/libero_spatial_0/eval_episode_0.mp4"
+        ]
+      }
+    },
+    "overall": {
+      "avg_sum_reward": 0.5,
+      "avg_max_reward": 0.5,
+      "pc_success": 50.0,
+      "n_episodes": 2,
+      "eval_s": 139.86146235466003,
+      "eval_ep_s": 69.9307314157486,
+      "video_paths": [
+        "/workspace/vla-semantic-controls/results/raw/smoke_metrics/videos/libero_spatial_0/eval_episode_0.mp4"
+      ]
+    }
+  }
+}

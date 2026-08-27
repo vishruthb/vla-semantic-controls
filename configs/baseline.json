@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "target": {
+    "description": "Reproduce the unmodified SmolVLA checkpoint on LIBERO-Spatial",
+    "reference_success_percent": 81.5,
+    "reference_successes": 163,
+    "reference_episodes": 200,
+    "reference_per_task_success_percent": [75.0, 85.0, 95.0, 80.0, 85.0, 100.0, 65.0, 70.0, 85.0, 75.0],
+    "material_difference_percentage_points": 5.0
+  },
+  "sources": {
+    "reference_evaluation_repository": "https://github.com/zuoxingdong/smolvla-libero-eval.git",
+    "reference_evaluation_revision": "114d19c51bf7655e61fb994f3b344a0257ceb20b",
+    "lerobot_repository": "https://github.com/huggingface/lerobot.git",
+    "lerobot_revision": "8515d456be1dbef8c133f07188c785e683eca899",
+    "libero_distribution": "hf-libero",
+    "libero_version": "0.1.4",
+    "libero_assets_repository": "lerobot/libero-assets",
+    "libero_assets_revision": "0b3ea86be5fe169d0fd036ae63d1070ec09e90f6",
+    "mujoco_version": "3.3.2"
+  },
+  "model": {
+    "repository": "HuggingFaceVLA/smolvla_libero",
+    "revision": "6721902bc4d61e50a3bfdb11dfb4cb626f05d102",
+    "backbone_repository": "HuggingFaceTB/SmolVLM2-500M-Instruct",
+    "backbone_revision": "7b375e1b73b11138ff12fe22c8f2822d8fe03467",
+    "device": "cuda",
+    "use_amp": false,
+    "num_steps": 1,
+    "n_action_steps": 1
+  },
+  "environment": {
+    "suite": "libero_spatial",
+    "task_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "episodes_per_task": 20,
+    "episode_length": 280,
+    "batch_size": 5,
+    "use_async_envs": true,
+    "max_parallel_tasks": 1,
+    "seed": 1000,
+    "control_mode": "relative",
+    "init_states": true,
+    "observation_height": 360,
+    "observation_width": 360,
+    "camera_name": "agentview_image,robot0_eye_in_hand_image",
+    "obs_type": "pixels_agent_pos",
+    "render_backend": "osmesa",
+    "render_episodes_per_task": 10
+  }
+}

@@ -119,18 +119,23 @@ def train(preset: str, stop_at: int) -> dict:
     return summary
 
 
-def eval_command(preset: str, step: int, episodes: int, batch: int) -> tuple[list[str], Path]:
+def result_stem(preset: str, step: int, episodes: int, deterministic: bool) -> str:
+    return f"{preset}_{step:05d}_e{episodes}" + ("_matched" if deterministic else "")
+
+
+def eval_command(preset: str, step: int, episodes: int, batch: int, deterministic: bool = False) -> tuple[list[str], Path]:
     RESULTS_ROOT.mkdir(parents=True, exist_ok=True)
-    stem = f"{preset}_{step:05d}_e{episodes}"
+    stem = result_stem(preset, step, episodes, deterministic)
     output = RESULTS_ROOT / f"{stem}.json"
     command = [*python(), "src/evaluate.py", "--checkpoint", str(checkpoint_dir(preset, step)),
                "--semantic-control", preset, "--task-ids", *map(str, range(10)),
                "--episodes-per-task", str(episodes), "--batch-size", str(batch), "--render-episodes-per-task", "0",
+               *(["--deterministic-noise"] if deterministic else []),
                "--output", str(output), "--report", str(RESULTS_ROOT / f"{stem}.md")]
     return command, output
 
 
-def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel: bool, max_parallel: int = 2) -> list[dict]:
+def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel: bool, max_parallel: int = 2, deterministic: bool = False) -> list[dict]:
     """Each evaluation holds 10 tasks x batch MuJoCo subprocesses alive; cap concurrency to avoid OOM."""
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
@@ -139,8 +144,8 @@ def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel:
                TOKENIZERS_PARALLELISM="false", LIBERO_CONFIG_PATH=str(ROOT / ".cache/libero"))
     procs, outputs = [], []
     for preset in presets:
-        command, output = eval_command(preset, step, episodes, batch)
-        log = (LOG_ROOT / f"eval_{preset}_{step:05d}_e{episodes}.log").open("w")
+        command, output = eval_command(preset, step, episodes, batch, deterministic)
+        log = (LOG_ROOT / f"eval_{result_stem(preset, step, episodes, deterministic)}.log").open("w")
         log.write(" ".join(command) + "\n"); log.flush()
         proc = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         procs.append((preset, proc, log, output))
@@ -217,20 +222,74 @@ def summarize(step: int, episodes: int | None, presets: list[str]) -> dict:
     return summary
 
 
+def compare(step: int, episodes: int, presets: list[str], deterministic: bool, baseline: str = "A") -> dict:
+    """Paired comparison of every preset against the baseline preset on matched episodes."""
+    import eval_protocol as ep
+
+    loaded = {}
+    for preset in presets:
+        path = RESULTS_ROOT / f"{result_stem(preset, step, episodes, deterministic)}.json"
+        if path.exists():
+            metrics = json.loads(path.read_text())
+            if not metrics.get("semantic_control", {}).get("routing", {}).get("verified"):
+                raise RuntimeError(f"{path}: routing not verified; result is invalid")
+            loaded[preset] = metrics
+    if baseline not in loaded:
+        raise RuntimeError(f"baseline {baseline} result missing")
+    keys_a, a = ep.episode_outcomes(loaded[baseline])
+    report = {"step": step, "episodes_per_task": episodes, "baseline": baseline, "n_episodes": int(len(a)),
+              "success": {p: float(100 * ep.episode_outcomes(m)[1].mean()) for p, m in loaded.items()}, "paired": {}, "per_task": {}}
+    for preset, metrics in loaded.items():
+        if preset == baseline:
+            continue
+        keys, other = ep.episode_outcomes(metrics)
+        if keys != keys_a:
+            raise RuntimeError(f"{preset}: episode keys differ from {baseline}; not matched")
+        report["paired"][preset] = ep.paired_stats(a, other)
+        report["per_task"][preset] = ep.per_task_deltas(keys, a, other)
+    out = RESULTS_ROOT / f"paired_{step:05d}_e{episodes}{'_matched' if deterministic else ''}.json"
+    out.write_text(json.dumps(report, indent=1))
+    lines = [f"# Paired comparison vs {baseline} @ step {step} ({episodes} episodes/task, {'matched' if deterministic else 'unmatched'} protocol)", "",
+             "| preset | success | Δ vs A (pts) | rel Δ | paired bootstrap 95% CI | wins / losses / ties | McNemar p |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: |"]
+    for preset in presets:
+        if preset not in loaded:
+            continue
+        s = report["success"][preset]
+        if preset == baseline:
+            lines.append(f"| {preset} | {s:.1f}% | — | — | — | — | — |"); continue
+        p = report["paired"][preset]; ci = p["paired_bootstrap_ci95_points"]
+        rel = f"{p['relative_delta_percent']:+.1f}%" if p["relative_delta_percent"] is not None else "n/a"
+        lines.append(f"| {preset} | {s:.1f}% | {p['delta_points']:+.1f} | {rel} | [{ci[0]:+.1f}, {ci[1]:+.1f}] | {p['wins']} / {p['losses']} / {p['ties']} | {p['mcnemar_p']:.3f} |")
+    lines += ["", "Per-task successes (delta vs A):", ""]
+    header = "| task | A | " + " | ".join(f"{p} (Δ)" for p in presets if p in loaded and p != baseline) + " |"
+    lines += [header, "| --- | ---: | " + " | ".join("---:" for p in presets if p in loaded and p != baseline) + " |"]
+    a_tasks = ep.per_task_deltas(keys_a, a, a)
+    for i, row in enumerate(a_tasks):
+        cells = [f"{report['per_task'][p][i]['other']} ({report['per_task'][p][i]['delta']:+d})" for p in presets if p in loaded and p != baseline]
+        lines.append(f"| {row['task_id']} | {row['a']} | " + " | ".join(cells) + " |")
+    (out.with_suffix(".md")).write_text("\n".join(lines) + "\n")
+    print("\n".join(lines))
+    return report
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
     t = sub.add_parser("train"); t.add_argument("--presets", nargs="+", default=list("ABCD")); t.add_argument("--stop-at", type=int, required=True)
     e = sub.add_parser("eval"); e.add_argument("--presets", nargs="+", default=list("ABCD")); e.add_argument("--step", type=int, required=True)
-    e.add_argument("--episodes", type=int, required=True); e.add_argument("--batch", type=int, required=True); e.add_argument("--parallel", action="store_true"); e.add_argument("--max-parallel", type=int, default=2)
+    e.add_argument("--episodes", type=int, required=True); e.add_argument("--batch", type=int, required=True); e.add_argument("--parallel", action="store_true"); e.add_argument("--max-parallel", type=int, default=2); e.add_argument("--deterministic", action="store_true")
+    c = sub.add_parser("compare"); c.add_argument("--presets", nargs="+", default=list("ABCD")); c.add_argument("--step", type=int, required=True); c.add_argument("--episodes", type=int, required=True); c.add_argument("--deterministic", action="store_true")
     s = sub.add_parser("summarize"); s.add_argument("--presets", nargs="+", default=list("ABCD")); s.add_argument("--step", type=int, required=True); s.add_argument("--episodes", type=int)
     args = parser.parse_args()
     if args.command == "train":
         results = [train(p, args.stop_at) for p in args.presets]
         return 0 if all(r["ok"] for r in results) else 1
     if args.command == "eval":
-        results = evaluate(args.presets, args.step, args.episodes, args.batch, args.parallel, args.max_parallel)
+        results = evaluate(args.presets, args.step, args.episodes, args.batch, args.parallel, args.max_parallel, args.deterministic)
         return 0 if all(r["returncode"] == 0 for r in results) else 1
+    if args.command == "compare":
+        compare(args.step, args.episodes, args.presets, args.deterministic)
+        return 0
     summarize(args.step, args.episodes, args.presets)
     return 0
 

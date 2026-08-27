@@ -49,6 +49,12 @@ def parse_args() -> argparse.Namespace:
         help="Preset to enforce with --checkpoint (must match the checkpoint's own record if present)",
     )
     parser.add_argument(
+        "--deterministic-noise",
+        action="store_true",
+        help="Matched protocol: per-(task, episode, step) seeded flow-matching noise via the policy's "
+        "select_action(noise=...) argument, deterministic cuDNN kernels, TF32 off",
+    )
+    parser.add_argument(
         "--rerender",
         type=Path,
         metavar="METRICS_JSON",
@@ -567,8 +573,10 @@ def main() -> int:
     memory_monitor = NvidiaMemoryMonitor()
     memory_monitor.start()
     set_seed(env_cfg_json["seed"])
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.benchmark = not args.deterministic_noise
+    torch.backends.cudnn.deterministic = bool(args.deterministic_noise)
+    torch.backends.cuda.matmul.allow_tf32 = not args.deterministic_noise
+    torch.backends.cudnn.allow_tf32 = not args.deterministic_noise
 
     raw_dir = args.output.resolve().parent / "raw" / args.output.stem
     videos_dir = raw_dir / "videos"
@@ -604,6 +612,14 @@ def main() -> int:
     env_preprocessor, env_postprocessor = make_env_pre_post_processors(
         env_cfg=env_config, policy_cfg=policy_cfg
     )
+
+    noise_protocol = None
+    if args.deterministic_noise:
+        import eval_protocol
+
+        noise_protocol = eval_protocol.install_deterministic_noise(policy, envs, env_cfg_json["seed"])
+        noise_protocol = {k: v for k, v in noise_protocol.items() if k != "state"}
+        print(f"Deterministic matched noise enabled: {noise_protocol['scheme']}", flush=True)
 
     latencies_ms: list[float] = []
     original_select_action = policy.select_action
@@ -732,8 +748,10 @@ def main() -> int:
             "n_action_steps": model_cfg["n_action_steps"],
             "use_amp": model_cfg["use_amp"],
             "device": model_cfg["device"],
-            "torch_allow_tf32": True,
-            "cudnn_benchmark": True,
+            "torch_allow_tf32": torch.backends.cuda.matmul.allow_tf32,
+            "cudnn_benchmark": torch.backends.cudnn.benchmark,
+            "cudnn_deterministic": torch.backends.cudnn.deterministic,
+            "deterministic_noise": noise_protocol or {"enabled": False},
         },
         "semantic_control": semantic_info,
         "revisions": {

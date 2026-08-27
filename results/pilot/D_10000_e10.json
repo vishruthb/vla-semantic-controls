@@ -1,0 +1,1002 @@
+{
+  "schema_version": 1,
+  "status": "not_comparable",
+  "started_at_utc": "2026-08-27T17:57:28.739714+00:00",
+  "completed_at_utc": "2026-08-27T18:46:55.152314+00:00",
+  "target": {
+    "description": "Reproduce the unmodified SmolVLA checkpoint on LIBERO-Spatial",
+    "reference_success_percent": 81.5,
+    "reference_successes": 163,
+    "reference_episodes": 200,
+    "reference_per_task_success_percent": [
+      75.0,
+      85.0,
+      95.0,
+      80.0,
+      85.0,
+      100.0,
+      65.0,
+      70.0,
+      85.0,
+      75.0
+    ],
+    "material_difference_percentage_points": 5.0
+  },
+  "report": {
+    "title": "SmolVLA LIBERO-Spatial Baseline \u2014 preset D @ step 10000",
+    "notes": [
+      "The reference artifact does not publish a complete transitive lock or its Python, CUDA, and driver versions; this run records all of them, so those remain the leading unresolved environment differences.",
+      "The protocol uses the same pinned LeRobot simulator-reuse behavior. This harness additionally pins the backbone snapshot and synchronizes CUDA for timing; neither changes the model architecture or action values."
+    ]
+  },
+  "result": {
+    "overall_success_percent": 64.0,
+    "successes": 64,
+    "episodes": 100,
+    "wilson_95_percent_interval": [
+      54.235402451608735,
+      72.72877959859568
+    ],
+    "per_task": [
+      {
+        "task_id": 0,
+        "language": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+        "successes": 6,
+        "episodes": 10,
+        "success_percent": 60.0,
+        "episode_outcomes": [
+          true,
+          false,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "task_id": 1,
+        "language": "pick up the black bowl next to the ramekin and place it on the plate",
+        "successes": 9,
+        "episodes": 10,
+        "success_percent": 90.0,
+        "episode_outcomes": [
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "task_id": 2,
+        "language": "pick up the black bowl from table center and place it on the plate",
+        "successes": 9,
+        "episodes": 10,
+        "success_percent": 90.0,
+        "episode_outcomes": [
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "task_id": 3,
+        "language": "pick up the black bowl on the cookie box and place it on the plate",
+        "successes": 7,
+        "episodes": 10,
+        "success_percent": 70.0,
+        "episode_outcomes": [
+          true,
+          true,
+          false,
+          true,
+          true,
+          true,
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "task_id": 4,
+        "language": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+        "successes": 1,
+        "episodes": 10,
+        "success_percent": 10.0,
+        "episode_outcomes": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "task_id": 5,
+        "language": "pick up the black bowl on the ramekin and place it on the plate",
+        "successes": 8,
+        "episodes": 10,
+        "success_percent": 80.0,
+        "episode_outcomes": [
+          true,
+          true,
+          false,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "task_id": 6,
+        "language": "pick up the black bowl next to the cookie box and place it on the plate",
+        "successes": 7,
+        "episodes": 10,
+        "success_percent": 70.0,
+        "episode_outcomes": [
+          true,
+          false,
+          true,
+          true,
+          true,
+          true,
+          false,
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "task_id": 7,
+        "language": "pick up the black bowl on the stove and place it on the plate",
+        "successes": 8,
+        "episodes": 10,
+        "success_percent": 80.0,
+        "episode_outcomes": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          false,
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "task_id": 8,
+        "language": "pick up the black bowl next to the plate and place it on the plate",
+        "successes": 6,
+        "episodes": 10,
+        "success_percent": 60.0,
+        "episode_outcomes": [
+          true,
+          false,
+          true,
+          false,
+          false,
+          true,
+          true,
+          true,
+          false,
+          true
+        ]
+      },
+      {
+        "task_id": 9,
+        "language": "pick up the black bowl on the wooden cabinet and place it on the plate",
+        "successes": 3,
+        "episodes": 10,
+        "success_percent": 30.0,
+        "episode_outcomes": [
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          true,
+          false,
+          false
+        ]
+      }
+    ]
+  },
+  "timing": {
+    "evaluation_seconds": 2965.372995929967,
+    "wall_seconds": 2966.367395992973,
+    "seconds_per_episode": 29.65372995929967,
+    "policy_latency_ms": {
+      "scope": "select_action wall time including CUDA synchronization",
+      "batch_size": 5,
+      "samples": 4969,
+      "mean": 110.45651268144171,
+      "median": 108.2934730220586,
+      "p95": 127.99435801571235,
+      "min": 89.37819901620969,
+      "max": 194.180691963993
+    }
+  },
+  "vram": {
+    "nvidia_smi_baseline_mib": 5235,
+    "nvidia_smi_peak_mib": 5796,
+    "torch_peak_allocated_mib": 2242.0224609375,
+    "torch_peak_reserved_mib": 2402.0
+  },
+  "eval_settings": {
+    "suite": "libero_spatial",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 10,
+    "episode_length": 280,
+    "batch_size": 5,
+    "use_async_envs": true,
+    "max_parallel_tasks": 1,
+    "seed": 1000,
+    "control_mode": "relative",
+    "init_states": true,
+    "observation_height": 360,
+    "observation_width": 360,
+    "camera_name": "agentview_image,robot0_eye_in_hand_image",
+    "obs_type": "pixels_agent_pos",
+    "render_backend": "osmesa",
+    "render_episodes_per_task": 0,
+    "num_steps": 1,
+    "n_action_steps": 1,
+    "use_amp": false,
+    "device": "cuda",
+    "torch_allow_tf32": true,
+    "cudnn_benchmark": true
+  },
+  "semantic_control": {
+    "control": {
+      "semantic_layers": "cross_only",
+      "update_vlm": true,
+      "preset": "D"
+    },
+    "control_source": "checkpoint_file",
+    "checkpoint_metadata": {
+      "init_fingerprint": "77cc336fa87863894c3548fd4ca0d7618582cf5457be028c30cd4581685d3569",
+      "vlm_fingerprint": "120a5713cd2b162014295b7c3f8babeecf564688d31cbcb86572fc3d81567824",
+      "trainable_fp32": true,
+      "trainable_parameters": 461974432,
+      "total_parameters": 604934176,
+      "parameter_groups": {
+        "expert": {
+          "parameters": 97451872,
+          "lr": "default"
+        },
+        "vlm": {
+          "parameters": 364522560,
+          "lr": 1e-05
+        }
+      },
+      "routing": {
+        "verified": true,
+        "semantic_layers": "cross_only",
+        "update_vlm": true,
+        "coupled_layers": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23,
+          25,
+          27,
+          29,
+          31
+        ],
+        "num_vlm_layers": 32,
+        "joint_layers": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24,
+          26,
+          28,
+          30
+        ],
+        "cross_layers": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13,
+          15,
+          17,
+          19,
+          21,
+          23,
+          25,
+          27,
+          29,
+          31
+        ],
+        "prefix_len": 141
+      },
+      "lerobot_version": "0.5.2",
+      "semantic_control_sha256": "7992b8ecf31777ad138c82736c092f3851b569d5feb81cc5a428edb6acd12bf3",
+      "mixed_precision": "bf16",
+      "resumed_from_step": 5000,
+      "resume_fingerprint": "c8026367c117d2069db3445ee2b6f3284b0ab775ad093e650bdd8b2b661251de",
+      "training": {
+        "step": 10000,
+        "loss_last": 0.25845620036125183,
+        "loss_mean_last_100": 0.2156323154270649,
+        "lr": {
+          "expert": 7.5625e-05,
+          "vlm": 7.5625e-06
+        },
+        "grad_norm_total_preclip_last": 2.0221099853515625,
+        "grad_norm_groups_postclip_last": {
+          "expert": 1.0550758838653564,
+          "vlm": 1.7250345945358276
+        },
+        "runtime": {
+          "process_elapsed_s": 2646.4714301080094,
+          "steps_in_process": 5000,
+          "start_step_in_process": 5000,
+          "mean_step_s": 0.5049621250706725
+        },
+        "peak_vram": {
+          "torch_max_allocated_gib_process": 18.548274517059326,
+          "nvidia_smi_used_mib_now": 20204
+        }
+      },
+      "step": 10000
+    },
+    "init_fingerprint": "ee928801fd97a5592162f767714a0c549cc8e034aa7b9272e2fe7c05341b8d1b",
+    "restored_dtype_parameters": 467160480,
+    "parameter_dtypes": [
+      "bfloat16",
+      "float32"
+    ],
+    "routing": {
+      "verified": true,
+      "semantic_layers": "cross_only",
+      "update_vlm": true,
+      "coupled_layers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31
+      ],
+      "num_vlm_layers": 32,
+      "joint_layers": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30
+      ],
+      "cross_layers": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31
+      ],
+      "prefix_len": 141
+    }
+  },
+  "revisions": {
+    "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_D/checkpoints/010000/pretrained_model",
+    "backbone": "/workspace/.cache/huggingface/hub/models--HuggingFaceTB--SmolVLM2-500M-Video-Instruct/snapshots/7b375e1b73b11138ff12fe22c8f2822d8fe03467",
+    "libero_assets": "lerobot/libero-assets@0b3ea86be5fe169d0fd036ae63d1070ec09e90f6",
+    "lerobot": "https://github.com/huggingface/lerobot.git@8515d456be1dbef8c133f07188c785e683eca899",
+    "reference_evaluation": "https://github.com/zuoxingdong/smolvla-libero-eval.git@114d19c51bf7655e61fb994f3b344a0257ceb20b",
+    "repo": "04a653ea9ae657851652c910a9295a5668fdc5dc",
+    "model_sha256": "a096e15db526cf01bca27530a79ac38e9be6018fb2a0894a19d38e4c253e8b76",
+    "uv_lock_sha256": "a0bda71d5fc3e46a4383669b46a1166c1b47eac1e7f6f2b3c75dd648f193714e"
+  },
+  "packages": {
+    "accelerate": "1.14.0",
+    "draccus": "0.10.0",
+    "gymnasium": "1.3.0",
+    "hf-libero": "0.1.4",
+    "huggingface-hub": "1.28.0",
+    "lerobot": "0.5.2",
+    "mujoco": "3.3.2",
+    "numpy": "2.2.6",
+    "opencv-python-headless": "4.13.0.92",
+    "robosuite": "1.4.0",
+    "safetensors": "0.8.0",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "transformers": "5.5.4"
+  },
+  "system": {
+    "python": "3.12.3",
+    "platform": "Linux-6.8.0-117-generic-x86_64-with-glibc2.39",
+    "gpu": "NVIDIA GeForce RTX 5090, 580.159.04, 32607",
+    "cuda_runtime": "12.8",
+    "cudnn": 91900,
+    "uv": "uv 0.9.0",
+    "os_packages": {
+      "libgl1": "1.7.0-1build1",
+      "libglfw3": "3.3.10-1build1",
+      "libosmesa6": "25.1.7-1ubuntu2~24.04.2"
+    },
+    "renderer": {
+      "MUJOCO_GL": "osmesa",
+      "PYOPENGL_PLATFORM": "osmesa"
+    }
+  },
+  "diagnostics": {
+    "target_comparison_applicable": false,
+    "material_difference": false,
+    "difference_percentage_points": -17.5,
+    "threshold_percentage_points": 5.0,
+    "observed_wilson_95_percent_interval": [
+      54.235402451608735,
+      72.72877959859568
+    ],
+    "reference_wilson_95_percent_interval": [
+      75.54293723884824,
+      86.26980719938395
+    ],
+    "per_task_difference_percentage_points": [
+      -15.0,
+      5.0,
+      -5.0,
+      -10.0,
+      -75.0,
+      -20.0,
+      5.0,
+      10.0,
+      -25.0,
+      -45.0
+    ],
+    "differences_from_reference": [
+      "This run used 10 task(s) with 100 episodes in total, which is not the baseline protocol; the reference comparison is not applicable.",
+      "The approximate Wilson 95% interval is 54.2-72.7%; it excludes the 81.5% reference (whose own interval is 75.5-86.3%). Episode dependence makes this only a diagnostic.",
+      "Per-task deltas: largest deficits are task(s) 4, 9, and 8; largest improvements are task(s) 7 and 6; the deficit is spread across tasks rather than a single-task protocol collapse."
+    ]
+  },
+  "artifacts": {
+    "videos_retained": false,
+    "raw_video_paths_are_provenance_only": true
+  },
+  "raw_lerobot_metrics": {
+    "per_task": [
+      {
+        "task_group": "libero_spatial",
+        "task_id": 0,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0
+          ],
+          "max_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0
+          ],
+          "successes": [
+            true,
+            false,
+            true,
+            true,
+            false,
+            true,
+            false,
+            true,
+            true,
+            false
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 1,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 2,
+        "metrics": {
+          "sum_rewards": [
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "max_rewards": [
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "successes": [
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 3,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            true,
+            false,
+            true,
+            true,
+            true,
+            false,
+            false,
+            true,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 4,
+        "metrics": {
+          "sum_rewards": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          "max_rewards": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          "successes": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 5,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            true,
+            false,
+            false,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 6,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            false,
+            true,
+            true,
+            true,
+            true,
+            false,
+            true,
+            false,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 7,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 8,
+        "metrics": {
+          "sum_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          "max_rewards": [
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0
+          ],
+          "successes": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            true,
+            true,
+            true,
+            false,
+            true
+          ],
+          "video_paths": []
+        }
+      },
+      {
+        "task_group": "libero_spatial",
+        "task_id": 9,
+        "metrics": {
+          "sum_rewards": [
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          "max_rewards": [
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          "successes": [
+            false,
+            false,
+            true,
+            false,
+            true,
+            false,
+            false,
+            true,
+            false,
+            false
+          ],
+          "video_paths": []
+        }
+      }
+    ],
+    "per_group": {
+      "libero_spatial": {
+        "avg_sum_reward": 0.64,
+        "avg_max_reward": 0.64,
+        "pc_success": 64.0,
+        "n_episodes": 100,
+        "video_paths": []
+      }
+    },
+    "overall": {
+      "avg_sum_reward": 0.64,
+      "avg_max_reward": 0.64,
+      "pc_success": 64.0,
+      "n_episodes": 100,
+      "eval_s": 2965.372862815857,
+      "eval_ep_s": 29.653728635311126,
+      "video_paths": []
+    }
+  }
+}

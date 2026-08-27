@@ -36,6 +36,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=ROOT / "results/metrics.json")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--keep-videos", action="store_true")
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        metavar="PRETRAINED_MODEL_DIR",
+        help="Evaluate a local LeRobot checkpoint (…/checkpoints/<step>/pretrained_model) instead of the "
+        "pinned Hub snapshot; semantic routing is restored from its semantic_control.json and verified",
+    )
+    parser.add_argument(
+        "--semantic-control",
+        choices=["A", "B", "C", "D"],
+        help="Preset to enforce with --checkpoint (must match the checkpoint's own record if present)",
+    )
+    parser.add_argument(
+        "--rerender",
+        type=Path,
+        metavar="METRICS_JSON",
+        help="Recompute status and diagnostics from an existing metrics file and write --report "
+        "without running the evaluation",
+    )
     return parser.parse_args()
 
 
@@ -199,30 +218,150 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def is_baseline_protocol(config: dict[str, Any], settings: dict[str, Any]) -> bool:
+    env_cfg = config["environment"]
+    return (
+        list(settings["task_ids"]) == list(env_cfg["task_ids"])
+        and settings["episodes_per_task"] == env_cfg["episodes_per_task"]
+        and settings["batch_size"] == env_cfg["batch_size"]
+    )
+
+
+def describe_per_task_spread(
+    per_task: list[dict[str, Any]], deltas: list[float], threshold: float
+) -> str:
+    """Summarize where the difference to the reference comes from, without presuming a direction."""
+    if len(deltas) < 2:
+        return (
+            f"Only task {per_task[0]['task_id']} was evaluated ({deltas[0]:+.1f} points versus its "
+            "reference); no spread analysis on a single task."
+        )
+    order = sorted(range(len(deltas)), key=deltas.__getitem__)
+    deficits = [per_task[i]["task_id"] for i in order if deltas[i] < 0][:3]
+    improvements = [per_task[i]["task_id"] for i in reversed(order) if deltas[i] > 0][:2]
+    if not deficits and not improvements:
+        return "Every task matches its per-task reference exactly."
+    parts = []
+    if deficits:
+        parts.append(f"largest deficits are task(s) {human_join(deficits)}")
+    if improvements:
+        parts.append(f"largest improvements are task(s) {human_join(improvements)}")
+    lost_episodes = [
+        -deltas[i] * per_task[i]["episodes"] / 100 for i in range(len(deltas)) if deltas[i] < 0
+    ]
+    if lost_episodes:
+        worst = order[0]
+        share = (-deltas[worst] * per_task[worst]["episodes"] / 100) / sum(lost_episodes)
+        if share >= 0.5 and -deltas[worst] >= 2 * threshold:
+            verdict = (
+                f"the deficit is concentrated in task {per_task[worst]['task_id']} "
+                f"({share:.0%} of lost episodes), which points to a task-specific protocol problem"
+            )
+        else:
+            verdict = "the deficit is spread across tasks rather than a single-task protocol collapse"
+    else:
+        verdict = "no task is below its reference"
+    return f"Per-task deltas: {'; '.join(parts)}; {verdict}."
+
+
+def build_diagnostics(
+    config: dict[str, Any], result: dict[str, Any], comparable: bool
+) -> dict[str, Any]:
+    """Derive the status and the diagnosis bullets from the measured result only."""
+    target = config["target"]
+    reference = target["reference_success_percent"]
+    threshold = target["material_difference_percentage_points"]
+    overall = result["overall_success_percent"]
+    delta = overall - reference
+    material = comparable and abs(delta) >= threshold
+    observed = wilson_interval(result["successes"], result["episodes"])
+    reference_interval = wilson_interval(target["reference_successes"], target["reference_episodes"])
+    per_task = result["per_task"]
+    reference_per_task = target.get("reference_per_task_success_percent")
+
+    bullets = []
+    if comparable:
+        band = "inside" if not material else "outside"
+        bullets.append(
+            f"Observed {overall:.1f}% is {delta:+.1f} points from the {reference:.1f}% target and "
+            f"{band} the configured +/-{threshold:.1f}-point band."
+        )
+    else:
+        bullets.append(
+            f"This run used {len(per_task)} task(s) with {result['episodes']} episodes in total, "
+            "which is not the baseline protocol; the reference comparison is not applicable."
+        )
+    includes = observed[0] <= reference <= observed[1]
+    bullets.append(
+        f"The approximate Wilson 95% interval is {observed[0]:.1f}-{observed[1]:.1f}%; it "
+        f"{'includes' if includes else 'excludes'} the {reference:.1f}% reference (whose own interval is "
+        f"{reference_interval[0]:.1f}-{reference_interval[1]:.1f}%). Episode dependence makes this only a diagnostic."
+    )
+    per_task_deltas: list[float] | None = None
+    if reference_per_task is not None and all(
+        task["task_id"] < len(reference_per_task) for task in per_task
+    ):
+        per_task_deltas = [
+            task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task
+        ]
+        bullets.append(describe_per_task_spread(per_task, per_task_deltas, threshold))
+    else:
+        bullets.append("No per-task reference covers these tasks; per-task deltas were not computed.")
+    if comparable:
+        bullets.extend(config.get("report", {}).get("notes", []))
+
+    status = "not_comparable" if not comparable else ("diagnose" if material else "pass")
+    return {
+        "status": status,
+        "target_comparison_applicable": comparable,
+        "material_difference": material,
+        "difference_percentage_points": delta,
+        "threshold_percentage_points": threshold,
+        "observed_wilson_95_percent_interval": list(observed),
+        "reference_wilson_95_percent_interval": list(reference_interval),
+        "per_task_difference_percentage_points": per_task_deltas,
+        "differences_from_reference": bullets,
+    }
+
+
+class Tolerant(dict):
+    """Dict view that renders missing keys as 'n/a' so older metrics files still report."""
+
+    def __getitem__(self, key: str) -> Any:
+        return super().get(key, "n/a")
+
+
 def write_report(metrics: dict[str, Any], path: Path) -> None:
     result = metrics["result"]
     target = metrics["target"]
-    settings = metrics["eval_settings"]
+    settings = Tolerant(metrics["eval_settings"])
     timing = metrics["timing"]
-    vram = metrics["vram"]
+    vram = Tolerant(metrics["vram"])
+    revisions = Tolerant(metrics["revisions"])
+    packages = Tolerant(metrics["packages"])
+    system = Tolerant(metrics["system"])
     delta = result["overall_success_percent"] - target["reference_success_percent"]
     threshold = target["material_difference_percentage_points"]
-    status = (
-        f"PASS (within the +/-{threshold:.1f}-point reproduction band)"
-        if not metrics["diagnostics"]["material_difference"]
-        else "DIAGNOSE"
+    status_text = {
+        "pass": f"PASS (within the +/-{threshold:.1f}-point reproduction band)",
+        "diagnose": f"DIAGNOSE (outside the +/-{threshold:.1f}-point reproduction band)",
+        "not_comparable": "NOT COMPARABLE (protocol differs from the baseline)",
+    }[metrics["status"]]
+    title = metrics.get("report", {}).get("title") or (
+        f"{revisions['checkpoint'].split('@')[0]} on {settings['suite']}"
     )
     reference_per_task = target.get("reference_per_task_success_percent")
-    gpu_fields = [field.strip() for field in (metrics["system"]["gpu"] or "unknown").split(",")]
+    gpu_fields = [field.strip() for field in str(system["gpu"] or "unknown").split(",")]
     gpu_summary = (
         f"{gpu_fields[0]}, driver {gpu_fields[1]}, {gpu_fields[2]} MiB"
         if len(gpu_fields) == 3
-        else metrics["system"]["gpu"]
+        else system["gpu"]
     )
+    latency = timing["policy_latency_ms"]
     rows = [
-        "# SmolVLA LIBERO-Spatial Baseline",
+        f"# {title}",
         "",
-        f"**Status: {status} — {result['successes']}/{result['episodes']} successes "
+        f"**Status: {status_text} — {result['successes']}/{result['episodes']} successes "
         f"({result['overall_success_percent']:.1f}%).** Reference: "
         f"~{target['reference_success_percent']:.1f}% (delta {delta:+.1f} points).",
         "",
@@ -230,7 +369,11 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
         "| --- | ---: | ---: | ---: |",
     ]
     for task in result["per_task"]:
-        reference_task = reference_per_task[task["task_id"]] if reference_per_task else None
+        reference_task = (
+            reference_per_task[task["task_id"]]
+            if reference_per_task is not None and task["task_id"] < len(reference_per_task)
+            else None
+        )
         reference_cell = f"{reference_task:.1f}%" if reference_task is not None else "n/a"
         delta_cell = (
             f"{task['success_percent'] - reference_task:+.1f}" if reference_task is not None else "n/a"
@@ -239,36 +382,50 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             f"| {task['task_id']}: {task['language']} | {task['success_percent']:.1f}% "
             f"({task['successes']}/{task['episodes']}) | {reference_cell} | {delta_cell} |"
         )
+    def flag(key: str, on: str, off: str) -> str:
+        value = settings[key]
+        return "n/a" if value == "n/a" else (on if value else off)
+
+    parallel_text = (
+        "n/a"
+        if settings["max_parallel_tasks"] == "n/a"
+        else "one task evaluated at a time"
+        if settings["max_parallel_tasks"] <= 1
+        else f"up to {settings['max_parallel_tasks']} tasks evaluated in parallel"
+    )
     rows.extend(
         [
             "",
             "## Runtime",
             "",
             f"- Evaluation: {timing['evaluation_seconds']:.1f} s; total process: {timing['wall_seconds']:.1f} s.",
-            f"- Policy latency, batch {settings['batch_size']}: mean {timing['policy_latency_ms']['mean']:.2f} ms, "
-            f"median {timing['policy_latency_ms']['median']:.2f} ms, p95 {timing['policy_latency_ms']['p95']:.2f} ms "
-            f"over {timing['policy_latency_ms']['samples']} calls.",
+            f"- Policy latency, batch {settings['batch_size']}: mean {latency['mean']:.2f} ms, "
+            f"median {latency['median']:.2f} ms, p95 {latency['p95']:.2f} ms over {latency['samples']} calls.",
             f"- Peak VRAM: {vram['nvidia_smi_peak_mib']} MiB by nvidia-smi; "
             f"PyTorch allocated/reserved peaks: {vram['torch_peak_allocated_mib']:.1f}/"
             f"{vram['torch_peak_reserved_mib']:.1f} MiB.",
-            f"- Host: {gpu_summary}; CUDA runtime {metrics['system']['cuda_runtime']}; "
-            f"Python {metrics['system']['python']}.",
+            f"- Host: {gpu_summary}; CUDA runtime {system['cuda_runtime']}; Python {system['python']}.",
             "",
             "## Exact setting",
             "",
-            f"- Checkpoint: `{metrics['revisions']['checkpoint']}` (weights SHA-256 `{metrics['revisions']['model_sha256']}`).",
-            f"- LeRobot: `{metrics['revisions']['lerobot']}`; LIBERO `{metrics['packages']['hf-libero']}`; "
-            f"MuJoCo `{metrics['packages']['mujoco']}`.",
-            f"- PyTorch `{metrics['packages']['torch']}`; Transformers `{metrics['packages']['transformers']}`; "
-            f"complete dependency resolution in `uv.lock` (SHA-256 `{metrics['revisions']['uv_lock_sha256']}`).",
-            f"- Harness revision: `{metrics['revisions']['repo'] or 'uncommitted worktree (no Git HEAD)'}`; "
-            f"reference artifact: `{metrics['revisions']['reference_evaluation']}`.",
-            f"- 10 tasks × {settings['episodes_per_task']} episodes; seed {settings['seed']}; "
-            f"fixed init states; relative control; {settings['observation_width']}×{settings['observation_height']} "
-            f"observations; {settings['episode_length']} max steps.",
-            f"- fp32; `num_steps={settings['num_steps']}`; `n_action_steps={settings['n_action_steps']}`; "
-            f"batch {settings['batch_size']}; `{settings['render_backend']}` rendering.",
-            "- TF32 allowed; cuDNN benchmark enabled; async vector environments; one task evaluated at a time.",
+            f"- Checkpoint: `{revisions['checkpoint']}` (weights SHA-256 `{revisions['model_sha256']}`).",
+            *([semantic_report_line(metrics["semantic_control"])] if metrics.get("semantic_control") else []),
+            f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; "
+            f"MuJoCo `{packages['mujoco']}`.",
+            f"- PyTorch `{packages['torch']}`; Transformers `{packages['transformers']}`; "
+            f"complete dependency resolution in `uv.lock` (SHA-256 `{revisions['uv_lock_sha256']}`).",
+            f"- Harness revision: `{revisions['repo'] or 'uncommitted worktree (no Git HEAD)'}`; "
+            f"reference artifact: `{revisions['reference_evaluation']}`.",
+            f"- {len(result['per_task'])} tasks × {settings['episodes_per_task']} episodes; seed {settings['seed']}; "
+            f"{flag('init_states', 'fixed', 'random')} init states; {settings['control_mode']} control; "
+            f"{settings['observation_width']}×{settings['observation_height']} observations; "
+            f"{settings['episode_length']} max steps.",
+            f"- {flag('use_amp', 'autocast (AMP)', 'fp32')}; `num_steps={settings['num_steps']}`; "
+            f"`n_action_steps={settings['n_action_steps']}`; batch {settings['batch_size']}; "
+            f"`{settings['render_backend']}` rendering.",
+            f"- TF32 {flag('torch_allow_tf32', 'allowed', 'disabled')}; cuDNN benchmark "
+            f"{flag('cudnn_benchmark', 'enabled', 'disabled')}; "
+            f"{flag('use_async_envs', 'async', 'sync')} vector environments; {parallel_text}.",
             "",
             "## Diagnosis",
             "",
@@ -280,8 +437,50 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
     path.write_text("\n".join(rows) + "\n")
 
 
+def report_block(config: dict[str, Any], semantic_info: dict[str, Any] | None) -> dict[str, Any]:
+    block = dict(config.get("report", {}))
+    if semantic_info:
+        preset = semantic_info["control"].get("preset") or semantic_info["control"]["semantic_layers"]
+        step = semantic_info.get("checkpoint_metadata", {}).get("step")
+        suffix = f"preset {preset}" + (f" @ step {step}" if step is not None else "")
+        block["title"] = f"{block.get('title', 'SmolVLA evaluation')} — {suffix}"
+    return block
+
+
+def semantic_report_line(semantic_info: dict[str, Any]) -> str:
+    control = semantic_info["control"]
+    routing = semantic_info.get("routing", {})
+    metadata = semantic_info.get("checkpoint_metadata", {})
+    fingerprint = metadata.get("init_fingerprint") or semantic_info.get("init_fingerprint") or ""
+    return (
+        f"- Semantic control: preset {control.get('preset')} (semantic_layers={control['semantic_layers']}, "
+        f"update_vlm={control['update_vlm']}; source {semantic_info.get('control_source')}); routing verified: "
+        f"{routing.get('verified')} on {len(routing.get('coupled_layers', []))}/{routing.get('num_vlm_layers')} "
+        f"coupled layers; training step {metadata.get('step', 'n/a')}; init fingerprint `{fingerprint[:16]}`; "
+        f"parameter dtypes {semantic_info.get('parameter_dtypes')}."
+    )
+
+
+def rerender(args: argparse.Namespace) -> int:
+    if args.report is None:
+        raise SystemExit("--rerender requires --report")
+    config = json.loads(args.config.resolve().read_text())
+    metrics = json.loads(args.rerender.resolve().read_text())
+    comparable = is_baseline_protocol(config, metrics["eval_settings"])
+    metrics["target"] = config["target"]
+    metrics["report"] = config.get("report", {})
+    metrics["diagnostics"] = build_diagnostics(config, metrics["result"], comparable)
+    metrics["status"] = metrics["diagnostics"].pop("status")
+    report_path = args.report.resolve()
+    write_report(metrics, report_path)
+    print(f"Wrote {report_path} (status={metrics['status']})", flush=True)
+    return 0
+
+
 def main() -> int:
     args = parse_args()
+    if args.rerender is not None:
+        return rerender(args)
     configure_process()
     ensure_libero_config()
     config = json.loads(args.config.resolve().read_text())
@@ -308,15 +507,46 @@ def main() -> int:
     from lerobot.scripts.lerobot_eval import eval_policy_all
     from lerobot.utils.random_utils import set_seed
 
-    policy_path = cached_snapshot(model_cfg["repository"], model_cfg["revision"])
-    backbone_path = cached_snapshot(model_cfg["backbone_repository"], model_cfg["backbone_revision"])
-    policy_cfg = PreTrainedConfig.from_pretrained(policy_path)
-    policy_cfg.pretrained_path = policy_path
-    policy_cfg.device = model_cfg["device"]
-    policy_cfg.use_amp = model_cfg["use_amp"]
-    policy_cfg.num_steps = model_cfg["num_steps"]
-    policy_cfg.n_action_steps = model_cfg["n_action_steps"]
-    policy_cfg.vlm_model_name = str(backbone_path)
+    policy = None
+    semantic_info = None
+    if args.checkpoint is not None:
+        import semantic_control as sc
+
+        policy_path = args.checkpoint.resolve()
+        requested = (
+            sc.SemanticControlConfig.from_preset(args.semantic_control) if args.semantic_control else None
+        )
+        policy, control, semantic_info = sc.load_policy_with_control(
+            policy_path,
+            requested,
+            device=model_cfg["device"],
+            policy_config_overrides={
+                "device": model_cfg["device"],
+                "use_amp": model_cfg["use_amp"],
+                "num_steps": model_cfg["num_steps"],
+                "n_action_steps": model_cfg["n_action_steps"],
+            },
+        )
+        if not semantic_info.get("routing", {}).get("verified"):
+            raise RuntimeError("Semantic routing verification failed; the evaluation would be invalid")
+        policy_cfg = policy.config
+        backbone_path = Path(policy_cfg.vlm_model_name)
+        print(
+            f"Checkpoint {policy_path}: preset {control.preset} "
+            f"(source={semantic_info['control_source']}), routing verified on layers "
+            f"{semantic_info['routing']['coupled_layers']}",
+            flush=True,
+        )
+    else:
+        policy_path = cached_snapshot(model_cfg["repository"], model_cfg["revision"])
+        backbone_path = cached_snapshot(model_cfg["backbone_repository"], model_cfg["backbone_revision"])
+        policy_cfg = PreTrainedConfig.from_pretrained(policy_path)
+        policy_cfg.pretrained_path = policy_path
+        policy_cfg.device = model_cfg["device"]
+        policy_cfg.use_amp = model_cfg["use_amp"]
+        policy_cfg.num_steps = model_cfg["num_steps"]
+        policy_cfg.n_action_steps = model_cfg["n_action_steps"]
+        policy_cfg.vlm_model_name = str(backbone_path)
 
     env_config = LiberoEnvConfig(
         task=env_cfg_json["suite"],
@@ -344,7 +574,10 @@ def main() -> int:
     videos_dir = raw_dir / "videos"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Loading {model_cfg['repository']}@{model_cfg['revision']}", flush=True)
+    print(
+        f"Loading {policy_path}" if args.checkpoint is not None else f"Loading {model_cfg['repository']}@{model_cfg['revision']}",
+        flush=True,
+    )
     print(
         f"Evaluating tasks={task_ids}, episodes/task={episodes}, batch={batch_size}, "
         f"num_steps={policy_cfg.num_steps}, n_action_steps={policy_cfg.n_action_steps}",
@@ -356,7 +589,8 @@ def main() -> int:
         use_async_envs=env_cfg_json["use_async_envs"],
         trust_remote_code=False,
     )
-    policy = make_policy(cfg=policy_cfg, env_cfg=env_config, rename_map={})
+    if policy is None:
+        policy = make_policy(cfg=policy_cfg, env_cfg=env_config, rename_map={})
     policy.eval()
     preprocessor, postprocessor = make_pre_post_processors(
         policy_cfg=policy_cfg,
@@ -434,28 +668,20 @@ def main() -> int:
         )
 
     overall_success = 100.0 * total_successes / total_episodes
-    reference = config["target"]["reference_success_percent"]
-    threshold = config["target"]["material_difference_percentage_points"]
-    is_baseline_protocol = (
+    result = {
+        "overall_success_percent": overall_success,
+        "successes": total_successes,
+        "episodes": total_episodes,
+        "wilson_95_percent_interval": list(wilson_interval(total_successes, total_episodes)),
+        "per_task": per_task,
+    }
+    comparable = (
         task_ids == env_cfg_json["task_ids"]
         and episodes == env_cfg_json["episodes_per_task"]
         and batch_size == env_cfg_json["batch_size"]
     )
-    material_difference = is_baseline_protocol and abs(overall_success - reference) >= threshold
-    observed_interval = wilson_interval(total_successes, total_episodes)
-    reference_interval = wilson_interval(
-        config["target"]["reference_successes"], config["target"]["reference_episodes"]
-    )
-    reference_per_task = config["target"]["reference_per_task_success_percent"]
-    per_task_deltas = [
-        task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task
-    ]
-    largest_deficits = sorted(range(len(per_task_deltas)), key=per_task_deltas.__getitem__)[:3]
-    largest_improvements = sorted(
-        range(len(per_task_deltas)), key=per_task_deltas.__getitem__, reverse=True
-    )[:2]
-    deficit_text = human_join(largest_deficits)
-    improvement_text = human_join(largest_improvements)
+    diagnostics = build_diagnostics(config, result, comparable)
+    status = diagnostics.pop("status")
     model_file = policy_path / "model.safetensors"
     driver_query = command_output(
         [
@@ -469,17 +695,12 @@ def main() -> int:
     packages = package_versions()
     metrics: dict[str, Any] = {
         "schema_version": 1,
-        "status": "pass" if not material_difference else "diagnose",
+        "status": status,
         "started_at_utc": started_at.isoformat(),
         "completed_at_utc": datetime.now(UTC).isoformat(),
         "target": config["target"],
-        "result": {
-            "overall_success_percent": overall_success,
-            "successes": total_successes,
-            "episodes": total_episodes,
-            "wilson_95_percent_interval": list(observed_interval),
-            "per_task": per_task,
-        },
+        "report": report_block(config, semantic_info),
+        "result": result,
         "timing": {
             "evaluation_seconds": evaluation_seconds,
             "wall_seconds": wall_seconds,
@@ -514,9 +735,16 @@ def main() -> int:
             "torch_allow_tf32": True,
             "cudnn_benchmark": True,
         },
+        "semantic_control": semantic_info,
         "revisions": {
-            "checkpoint": f"{model_cfg['repository']}@{model_cfg['revision']}",
-            "backbone": f"{model_cfg['backbone_repository']}@{model_cfg['backbone_revision']}",
+            "checkpoint": (
+                f"local:{policy_path}" if args.checkpoint is not None
+                else f"{model_cfg['repository']}@{model_cfg['revision']}"
+            ),
+            "backbone": (
+                str(backbone_path) if args.checkpoint is not None
+                else f"{model_cfg['backbone_repository']}@{model_cfg['backbone_revision']}"
+            ),
             "libero_assets": (
                 f"{config['sources']['libero_assets_repository']}@"
                 f"{config['sources']['libero_assets_revision']}"
@@ -544,22 +772,7 @@ def main() -> int:
                 "PYOPENGL_PLATFORM": os.environ.get("PYOPENGL_PLATFORM"),
             },
         },
-        "diagnostics": {
-            "target_comparison_applicable": is_baseline_protocol,
-            "material_difference": material_difference,
-            "difference_percentage_points": overall_success - reference,
-            "threshold_percentage_points": threshold,
-            "observed_wilson_95_percent_interval": list(observed_interval),
-            "reference_wilson_95_percent_interval": list(reference_interval),
-            "per_task_difference_percentage_points": per_task_deltas,
-            "differences_from_reference": [
-                f"Observed {overall_success:.1f}% is {overall_success - reference:+.1f} points from the target and inside the configured +/-{threshold:.1f}-point band.",
-                f"The approximate Wilson 95% interval is {observed_interval[0]:.1f}-{observed_interval[1]:.1f}%; it includes 81.5%, but episode dependence makes this only a diagnostic.",
-                f"Differences are spread across tasks: largest deficits are {deficit_text}; largest improvements are {improvement_text}. This is not a single-task protocol collapse.",
-                "The reference artifact does not publish a complete transitive lock or its Python, CUDA, and driver versions; this run records all of them, so those remain the leading unresolved environment differences.",
-                "The protocol uses the same pinned LeRobot simulator-reuse behavior. This harness additionally pins the backbone snapshot and synchronizes CUDA for timing; neither changes the model architecture or action values.",
-            ],
-        },
+        "diagnostics": diagnostics,
         "artifacts": {
             "videos_retained": args.keep_videos,
             "raw_video_paths_are_provenance_only": not args.keep_videos,
@@ -585,7 +798,7 @@ def main() -> int:
     print(f"Wrote {args.output}", flush=True)
     if report_path:
         print(f"Wrote {report_path}", flush=True)
-    return 0 if metrics["status"] == "pass" else 3
+    return 3 if metrics["status"] == "diagnose" else 0
 
 
 if __name__ == "__main__":

@@ -34,8 +34,8 @@
 
 ## Diagnosis
 
-- Observed 77.0% is -4.5 points from the target and inside the configured +/-5.0-point band.
-- The approximate Wilson 95% interval is 70.7-82.3%; it includes 81.5%, but episode dependence makes this only a diagnostic.
-- Differences are spread across tasks: largest deficits are 0, 5, and 6; largest improvements are 1 and 9. This is not a single-task protocol collapse.
+- Observed 77.0% is -4.5 points from the 81.5% target and inside the configured +/-5.0-point band.
+- The approximate Wilson 95% interval is 70.7-82.3%; it includes the 81.5% reference (whose own interval is 75.5-86.3%). Episode dependence makes this only a diagnostic.
+- Per-task deltas: largest deficits are task(s) 0, 5, and 6; largest improvements are task(s) 9 and 1; the deficit is spread across tasks rather than a single-task protocol collapse.
 - The reference artifact does not publish a complete transitive lock or its Python, CUDA, and driver versions; this run records all of them, so those remain the leading unresolved environment differences.
 - The protocol uses the same pinned LeRobot simulator-reuse behavior. This harness additionally pins the backbone snapshot and synchronizes CUDA for timing; neither changes the model architecture or action values.

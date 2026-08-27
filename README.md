@@ -37,6 +37,7 @@ Presets A–D live in `configs/semantic_control.json`, pinned to `lerobot/smolvl
 
 ```bash
 uv run --frozen python src/semantic_control.py cache               # pinned checkpoint + backbone
+uv run --frozen python src/fetch_libero_subset.py                  # LIBERO-Spatial episodes 1261-1692 (fixes the Hub file map)
 uv run --frozen python src/semantic_control.py report --preset C   # parameter counts
 uv run --frozen python -m pytest tests/test_semantic_control_unit.py   # CPU, tiny random model
 uv run --frozen python -m pytest tests/test_semantic_control_gpu.py    # RTX 5090, real checkpoint

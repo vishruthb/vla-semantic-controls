@@ -214,7 +214,7 @@ round-trips through the loader.
   episodes 1261-1692 live in `data/chunk-000/file-055..068`, but those files hold episodes 137-174 and
   the map's indices stop at 68 while the repo has 377 data files. The data files themselves are
   consistent (global `episode_index`, `index`, `task_index`). The true map was rebuilt from each
-  parquet footer's column statistics (`scratchpad/fetch_spatial_subset.py`), the 73 files that hold the
+  parquet footer's column statistics (`src/fetch_libero_subset.py`), the 73 files that hold the
   spatial episodes were downloaded into the LeRobot hub cache (7.4 GB), and LeRobot's own
   `isin(episodes)` filter then loads exactly 432 episodes / 52,970 frames.
 - **Episode subsets are broken in LeRobot @8515d45**: `EpisodeAwareSampler` yields absolute frame

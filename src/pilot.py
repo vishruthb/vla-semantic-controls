@@ -130,7 +130,8 @@ def eval_command(preset: str, step: int, episodes: int, batch: int) -> tuple[lis
     return command, output
 
 
-def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel: bool) -> list[dict]:
+def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel: bool, max_parallel: int = 2) -> list[dict]:
+    """Each evaluation holds 10 tasks x batch MuJoCo subprocesses alive; cap concurrency to avoid OOM."""
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", MUJOCO_GL="osmesa", PYOPENGL_PLATFORM="osmesa",
@@ -145,6 +146,9 @@ def evaluate(presets: list[str], step: int, episodes: int, batch: int, parallel:
         procs.append((preset, proc, log, output))
         if not parallel:
             proc.wait()
+        else:
+            while sum(1 for _, p_, _, _ in procs if p_.poll() is None) >= max_parallel:
+                time.sleep(15)
     results = []
     for preset, proc, log, output in procs:
         proc.wait(); log.close()
@@ -218,14 +222,14 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     t = sub.add_parser("train"); t.add_argument("--presets", nargs="+", default=list("ABCD")); t.add_argument("--stop-at", type=int, required=True)
     e = sub.add_parser("eval"); e.add_argument("--presets", nargs="+", default=list("ABCD")); e.add_argument("--step", type=int, required=True)
-    e.add_argument("--episodes", type=int, required=True); e.add_argument("--batch", type=int, required=True); e.add_argument("--parallel", action="store_true")
+    e.add_argument("--episodes", type=int, required=True); e.add_argument("--batch", type=int, required=True); e.add_argument("--parallel", action="store_true"); e.add_argument("--max-parallel", type=int, default=2)
     s = sub.add_parser("summarize"); s.add_argument("--presets", nargs="+", default=list("ABCD")); s.add_argument("--step", type=int, required=True); s.add_argument("--episodes", type=int)
     args = parser.parse_args()
     if args.command == "train":
         results = [train(p, args.stop_at) for p in args.presets]
         return 0 if all(r["ok"] for r in results) else 1
     if args.command == "eval":
-        results = evaluate(args.presets, args.step, args.episodes, args.batch, args.parallel)
+        results = evaluate(args.presets, args.step, args.episodes, args.batch, args.parallel, args.max_parallel)
         return 0 if all(r["returncode"] == 0 for r in results) else 1
     summarize(args.step, args.episodes, args.presets)
     return 0

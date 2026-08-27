@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "description": "Semantic-control presets for SmolVLA: which layers give the action expert access to VLM key/values, and whether the VLM is updated by the action loss. See tmp/arch.md section 7.",
+  "checkpoint": {
+    "repository": "lerobot/smolvla_base",
+    "revision": "c83c3163b8ca9b7e67c509fffd9121e66cb96205",
+    "backbone_repository": "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+    "backbone_revision": "7b375e1b73b11138ff12fe22c8f2822d8fe03467"
+  },
+  "invariants": {
+    "vision_encoder_frozen": true,
+    "state_proj_trainable": true
+  },
+  "presets": {
+    "A": {"semantic_layers": "all", "update_vlm": false},
+    "B": {"semantic_layers": "all", "update_vlm": true},
+    "C": {"semantic_layers": "cross_only", "update_vlm": false},
+    "D": {"semantic_layers": "cross_only", "update_vlm": true}
+  }
+}

@@ -266,9 +266,12 @@ class PilotHookTests(unittest.TestCase):
                 module.update_last_checkpoint(Path(tmp) / "000001")
                 self.assertEqual(calls, [])  # step 1 not in save_at -> skipped, link not updated
                 self.assertEqual(links, [])
+                (Path(tmp) / "000001" / "training_state").mkdir(parents=True)
+                (Path(tmp) / "000001" / "training_state" / "optimizer_state.safetensors").write_bytes(b"x")
                 train_semantic.STATE["step"] = 2
                 module.save_checkpoint(Path(tmp) / "000002", 2, cfg, policy, optimizer, None)
                 self.assertEqual(calls, [2])
+                self.assertFalse((Path(tmp) / "000001" / "training_state").exists())  # earlier state pruned
                 record = json.loads((Path(tmp) / "000002" / "pretrained_model" / sc.SEMANTIC_CONTROL_FILE).read_text())
                 self.assertEqual(record["step"], 2)
                 self.assertIn("training", record)

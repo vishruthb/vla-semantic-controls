@@ -1,0 +1,248 @@
+{
+ "reference": {
+  "label": "released SmolVLA",
+  "kind": "stock_released_smolvla",
+  "successes": 164,
+  "episodes": 200,
+  "percent": 82.0,
+  "wilson95": [
+   76.0885249712751,
+   86.70537414057982
+  ],
+  "per_task": [
+   13,
+   19,
+   20,
+   19,
+   14,
+   17,
+   10,
+   16,
+   19,
+   17
+  ],
+  "checkpoint": "HuggingFaceVLA/smolvla_libero@6721902bc4d61e50a3bfdb11dfb4cb626f05d102"
+ },
+ "candidate": {
+  "label": "B@30k",
+  "successes": 157,
+  "episodes": 200,
+  "percent": 78.5,
+  "wilson95": [
+   72.29769265100339,
+   83.62812374549242
+  ],
+  "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_B/checkpoints/030000/pretrained_model"
+ },
+ "paired_candidate_minus_reference": {
+  "n": 200,
+  "success_a": 0.82,
+  "success_other": 0.785,
+  "delta_points": -3.5000000000000004,
+  "relative_delta_percent": -4.26829268292682,
+  "paired_bootstrap_ci95_points": [
+   -11.0,
+   4.0
+  ],
+  "wins": 27,
+  "losses": 34,
+  "ties": 139,
+  "mcnemar_p": 0.4426260049464714,
+  "sign_test_p": 0.4426260049464714
+ },
+ "per_task": [
+  {
+   "task_id": 0,
+   "n": 20,
+   "a": 13,
+   "other": 16,
+   "delta": 3,
+   "wins": 6,
+   "losses": 3
+  },
+  {
+   "task_id": 1,
+   "n": 20,
+   "a": 19,
+   "other": 18,
+   "delta": -1,
+   "wins": 1,
+   "losses": 2
+  },
+  {
+   "task_id": 2,
+   "n": 20,
+   "a": 20,
+   "other": 17,
+   "delta": -3,
+   "wins": 0,
+   "losses": 3
+  },
+  {
+   "task_id": 3,
+   "n": 20,
+   "a": 19,
+   "other": 19,
+   "delta": 0,
+   "wins": 1,
+   "losses": 1
+  },
+  {
+   "task_id": 4,
+   "n": 20,
+   "a": 14,
+   "other": 13,
+   "delta": -1,
+   "wins": 4,
+   "losses": 5
+  },
+  {
+   "task_id": 5,
+   "n": 20,
+   "a": 17,
+   "other": 12,
+   "delta": -5,
+   "wins": 2,
+   "losses": 7
+  },
+  {
+   "task_id": 6,
+   "n": 20,
+   "a": 10,
+   "other": 16,
+   "delta": 6,
+   "wins": 8,
+   "losses": 2
+  },
+  {
+   "task_id": 7,
+   "n": 20,
+   "a": 16,
+   "other": 17,
+   "delta": 1,
+   "wins": 3,
+   "losses": 2
+  },
+  {
+   "task_id": 8,
+   "n": 20,
+   "a": 19,
+   "other": 15,
+   "delta": -4,
+   "wins": 0,
+   "losses": 4
+  },
+  {
+   "task_id": 9,
+   "n": 20,
+   "a": 17,
+   "other": 14,
+   "delta": -3,
+   "wins": 2,
+   "losses": 5
+  }
+ ],
+ "context": [
+  {
+   "label": "A@30k",
+   "kind": "semantic_control_checkpoint",
+   "successes": 141,
+   "episodes": 200,
+   "percent": 70.5,
+   "wilson95": [
+    63.84128547538121,
+    76.38605614315084
+   ],
+   "per_task": [
+    13,
+    16,
+    15,
+    15,
+    13,
+    17,
+    19,
+    19,
+    6,
+    8
+   ],
+   "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_A/checkpoints/030000/pretrained_model"
+  },
+  {
+   "label": "B@30k",
+   "kind": "semantic_control_checkpoint",
+   "successes": 157,
+   "episodes": 200,
+   "percent": 78.5,
+   "wilson95": [
+    72.29769265100339,
+    83.62812374549242
+   ],
+   "per_task": [
+    16,
+    18,
+    17,
+    19,
+    13,
+    12,
+    16,
+    17,
+    15,
+    14
+   ],
+   "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_B/checkpoints/030000/pretrained_model"
+  },
+  {
+   "label": "C@30k",
+   "kind": "semantic_control_checkpoint",
+   "successes": 132,
+   "episodes": 200,
+   "percent": 66.0,
+   "wilson95": [
+    59.18849552683626,
+    72.2084540290912
+   ],
+   "per_task": [
+    13,
+    16,
+    15,
+    8,
+    11,
+    17,
+    17,
+    15,
+    9,
+    11
+   ],
+   "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_C/checkpoints/030000/pretrained_model"
+  },
+  {
+   "label": "D@30k",
+   "kind": "semantic_control_checkpoint",
+   "successes": 146,
+   "episodes": 200,
+   "percent": 73.0,
+   "wilson95": [
+    66.45656480133158,
+    78.67655018531417
+   ],
+   "per_task": [
+    11,
+    19,
+    17,
+    15,
+    13,
+    11,
+    18,
+    16,
+    10,
+    16
+   ],
+   "checkpoint": "local:/workspace/vla-semantic-controls/outputs/train/spatial_D/checkpoints/030000/pretrained_model"
+  }
+ ],
+ "protocol_sha256": {
+  "reference": "796598d68b5592a8b894b516c9ba356ac1f0cbc9da21a370d10bb1cca46d4464",
+  "candidate": "796598d68b5592a8b894b516c9ba356ac1f0cbc9da21a370d10bb1cca46d4464"
+ },
+ "verdict": "NO RELIABLE DIFFERENCE"
+}

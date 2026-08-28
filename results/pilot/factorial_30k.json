@@ -1,0 +1,266 @@
+{
+ "design": {
+  "episodes_per_task": 20,
+  "tasks": 10,
+  "matched_episodes": 200,
+  "bootstrap_replicates": 20000,
+  "seed": 0,
+  "primary_interval": "task-stratified episode bootstrap of complete A/B/C/D tuples",
+  "sensitivity_interval": "task-cluster bootstrap (10 clusters; robustness check only)"
+ },
+ "success_percent": {
+  "A": 70.5,
+  "B": 78.5,
+  "C": 66.0,
+  "D": 73.0
+ },
+ "factorial_effects": {
+  "vlm_update_main": {
+   "points": 7.5,
+   "episode_stratified_ci95": [
+    2.0,
+    13.0
+   ],
+   "task_cluster_ci95": [
+    -3.0,
+    17.25
+   ],
+   "sign_flip_permutation_p": 0.017249137543122843,
+   "bootstrap_fraction_below_zero": 0.00265
+  },
+  "routing_main": {
+   "points": -5.0,
+   "episode_stratified_ci95": [
+    -11.0,
+    1.0
+   ],
+   "task_cluster_ci95": [
+    -11.75,
+    1.0
+   ],
+   "sign_flip_permutation_p": 0.1367931603419829,
+   "bootstrap_fraction_below_zero": 0.9412
+  },
+  "interaction": {
+   "points": -1.0,
+   "episode_stratified_ci95": [
+    -11.0,
+    9.0
+   ],
+   "task_cluster_ci95": [
+    -13.0,
+    9.5
+   ],
+   "sign_flip_permutation_p": 0.927553622318884,
+   "bootstrap_fraction_below_zero": 0.56435
+  }
+ },
+ "paired_contrasts": {
+  "B_minus_A": {
+   "delta_points": 8.0,
+   "wins": 40,
+   "losses": 24,
+   "ties": 136,
+   "mcnemar_p": 0.05994118956699923,
+   "episode_stratified_ci95": [
+    1.0,
+    15.0
+   ],
+   "task_cluster_ci95": [
+    -4.5,
+    20.5
+   ]
+  },
+  "D_minus_C": {
+   "delta_points": 7.000000000000001,
+   "wins": 40,
+   "losses": 26,
+   "ties": 134,
+   "mcnemar_p": 0.1088569644097161,
+   "episode_stratified_ci95": [
+    -0.5,
+    14.499999999999998
+   ],
+   "task_cluster_ci95": [
+    -4.0,
+    17.0
+   ]
+  },
+  "C_minus_A": {
+   "delta_points": -4.5,
+   "wins": 28,
+   "losses": 37,
+   "ties": 135,
+   "mcnemar_p": 0.3210841356849956,
+   "episode_stratified_ci95": [
+    -12.0,
+    3.0
+   ],
+   "task_cluster_ci95": [
+    -14.000000000000002,
+    4.0
+   ]
+  },
+  "D_minus_B": {
+   "delta_points": -5.5,
+   "wins": 30,
+   "losses": 41,
+   "ties": 129,
+   "mcnemar_p": 0.23509756240834184,
+   "episode_stratified_ci95": [
+    -13.5,
+    2.5
+   ],
+   "task_cluster_ci95": [
+    -13.5,
+    2.0
+   ]
+  }
+ },
+ "contrast_correlations": {
+  "corr(B-A, D-C)": 0.13905495163742823,
+  "corr(C-A, D-B)": 0.18544423560124323
+ },
+ "per_task_effects": [
+  {
+   "task_id": 0,
+   "B_minus_A": 15.0,
+   "D_minus_C": -10.0,
+   "C_minus_A": 0.0,
+   "D_minus_B": -25.0,
+   "vlm_update_main": 2.5,
+   "routing_main": -12.5,
+   "interaction": -25.0,
+   "success_A": 65.0,
+   "success_B": 80.0,
+   "success_C": 65.0,
+   "success_D": 55.0
+  },
+  {
+   "task_id": 1,
+   "B_minus_A": 10.0,
+   "D_minus_C": 15.0,
+   "C_minus_A": 0.0,
+   "D_minus_B": 5.0,
+   "vlm_update_main": 12.5,
+   "routing_main": 2.5,
+   "interaction": 5.0,
+   "success_A": 80.0,
+   "success_B": 90.0,
+   "success_C": 80.0,
+   "success_D": 95.0
+  },
+  {
+   "task_id": 2,
+   "B_minus_A": 10.0,
+   "D_minus_C": 10.0,
+   "C_minus_A": 0.0,
+   "D_minus_B": 0.0,
+   "vlm_update_main": 10.0,
+   "routing_main": 0.0,
+   "interaction": 0.0,
+   "success_A": 75.0,
+   "success_B": 85.0,
+   "success_C": 75.0,
+   "success_D": 85.0
+  },
+  {
+   "task_id": 3,
+   "B_minus_A": 20.0,
+   "D_minus_C": 35.0,
+   "C_minus_A": -35.0,
+   "D_minus_B": -20.0,
+   "vlm_update_main": 27.5,
+   "routing_main": -27.5,
+   "interaction": 15.0,
+   "success_A": 75.0,
+   "success_B": 95.0,
+   "success_C": 40.0,
+   "success_D": 75.0
+  },
+  {
+   "task_id": 4,
+   "B_minus_A": 0.0,
+   "D_minus_C": 10.0,
+   "C_minus_A": -10.0,
+   "D_minus_B": 0.0,
+   "vlm_update_main": 5.0,
+   "routing_main": -5.0,
+   "interaction": 10.0,
+   "success_A": 65.0,
+   "success_B": 65.0,
+   "success_C": 55.0,
+   "success_D": 65.0
+  },
+  {
+   "task_id": 5,
+   "B_minus_A": -25.0,
+   "D_minus_C": -30.0,
+   "C_minus_A": 0.0,
+   "D_minus_B": -5.0,
+   "vlm_update_main": -27.5,
+   "routing_main": -2.5,
+   "interaction": -5.0,
+   "success_A": 85.0,
+   "success_B": 60.0,
+   "success_C": 85.0,
+   "success_D": 55.0
+  },
+  {
+   "task_id": 6,
+   "B_minus_A": -15.0,
+   "D_minus_C": 5.0,
+   "C_minus_A": -10.0,
+   "D_minus_B": 10.0,
+   "vlm_update_main": -5.0,
+   "routing_main": 0.0,
+   "interaction": 20.0,
+   "success_A": 95.0,
+   "success_B": 80.0,
+   "success_C": 85.0,
+   "success_D": 90.0
+  },
+  {
+   "task_id": 7,
+   "B_minus_A": -10.0,
+   "D_minus_C": 5.0,
+   "C_minus_A": -20.0,
+   "D_minus_B": -5.0,
+   "vlm_update_main": -2.5,
+   "routing_main": -12.5,
+   "interaction": 15.0,
+   "success_A": 95.0,
+   "success_B": 85.0,
+   "success_C": 75.0,
+   "success_D": 80.0
+  },
+  {
+   "task_id": 8,
+   "B_minus_A": 45.0,
+   "D_minus_C": 5.0,
+   "C_minus_A": 15.0,
+   "D_minus_B": -25.0,
+   "vlm_update_main": 25.0,
+   "routing_main": -5.0,
+   "interaction": -40.0,
+   "success_A": 30.0,
+   "success_B": 75.0,
+   "success_C": 45.0,
+   "success_D": 50.0
+  },
+  {
+   "task_id": 9,
+   "B_minus_A": 30.0,
+   "D_minus_C": 25.0,
+   "C_minus_A": 15.0,
+   "D_minus_B": 10.0,
+   "vlm_update_main": 27.5,
+   "routing_main": 12.5,
+   "interaction": -5.0,
+   "success_A": 40.0,
+   "success_B": 70.0,
+   "success_C": 55.0,
+   "success_D": 80.0
+  }
+ ]
+}

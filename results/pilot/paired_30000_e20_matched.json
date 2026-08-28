@@ -1,0 +1,340 @@
+{
+ "step": 30000,
+ "episodes_per_task": 20,
+ "baseline": "A",
+ "n_episodes": 200,
+ "success": {
+  "A": 70.5,
+  "B": 78.5,
+  "C": 66.0,
+  "D": 73.0
+ },
+ "paired": {
+  "B": {
+   "n": 200,
+   "success_a": 0.705,
+   "success_other": 0.785,
+   "delta_points": 8.0,
+   "relative_delta_percent": 11.347517730496465,
+   "paired_bootstrap_ci95_points": [
+    0.5,
+    15.5
+   ],
+   "wins": 40,
+   "losses": 24,
+   "ties": 136,
+   "mcnemar_p": 0.05994118956699923,
+   "sign_test_p": 0.05994118956699923
+  },
+  "C": {
+   "n": 200,
+   "success_a": 0.705,
+   "success_other": 0.66,
+   "delta_points": -4.5,
+   "relative_delta_percent": -6.382978723404245,
+   "paired_bootstrap_ci95_points": [
+    -12.5,
+    3.5000000000000004
+   ],
+   "wins": 28,
+   "losses": 37,
+   "ties": 135,
+   "mcnemar_p": 0.3210841356849956,
+   "sign_test_p": 0.3210841356849956
+  },
+  "D": {
+   "n": 200,
+   "success_a": 0.705,
+   "success_other": 0.73,
+   "delta_points": 2.5,
+   "relative_delta_percent": 3.546099290780145,
+   "paired_bootstrap_ci95_points": [
+    -6.0,
+    11.0
+   ],
+   "wins": 40,
+   "losses": 35,
+   "ties": 125,
+   "mcnemar_p": 0.644463913894226,
+   "sign_test_p": 0.644463913894226
+  }
+ },
+ "per_task": {
+  "B": [
+   {
+    "task_id": 0,
+    "n": 20,
+    "a": 13,
+    "other": 16,
+    "delta": 3,
+    "wins": 6,
+    "losses": 3
+   },
+   {
+    "task_id": 1,
+    "n": 20,
+    "a": 16,
+    "other": 18,
+    "delta": 2,
+    "wins": 3,
+    "losses": 1
+   },
+   {
+    "task_id": 2,
+    "n": 20,
+    "a": 15,
+    "other": 17,
+    "delta": 2,
+    "wins": 3,
+    "losses": 1
+   },
+   {
+    "task_id": 3,
+    "n": 20,
+    "a": 15,
+    "other": 19,
+    "delta": 4,
+    "wins": 4,
+    "losses": 0
+   },
+   {
+    "task_id": 4,
+    "n": 20,
+    "a": 13,
+    "other": 13,
+    "delta": 0,
+    "wins": 4,
+    "losses": 4
+   },
+   {
+    "task_id": 5,
+    "n": 20,
+    "a": 17,
+    "other": 12,
+    "delta": -5,
+    "wins": 1,
+    "losses": 6
+   },
+   {
+    "task_id": 6,
+    "n": 20,
+    "a": 19,
+    "other": 16,
+    "delta": -3,
+    "wins": 0,
+    "losses": 3
+   },
+   {
+    "task_id": 7,
+    "n": 20,
+    "a": 19,
+    "other": 17,
+    "delta": -2,
+    "wins": 1,
+    "losses": 3
+   },
+   {
+    "task_id": 8,
+    "n": 20,
+    "a": 6,
+    "other": 15,
+    "delta": 9,
+    "wins": 11,
+    "losses": 2
+   },
+   {
+    "task_id": 9,
+    "n": 20,
+    "a": 8,
+    "other": 14,
+    "delta": 6,
+    "wins": 7,
+    "losses": 1
+   }
+  ],
+  "C": [
+   {
+    "task_id": 0,
+    "n": 20,
+    "a": 13,
+    "other": 13,
+    "delta": 0,
+    "wins": 3,
+    "losses": 3
+   },
+   {
+    "task_id": 1,
+    "n": 20,
+    "a": 16,
+    "other": 16,
+    "delta": 0,
+    "wins": 3,
+    "losses": 3
+   },
+   {
+    "task_id": 2,
+    "n": 20,
+    "a": 15,
+    "other": 15,
+    "delta": 0,
+    "wins": 2,
+    "losses": 2
+   },
+   {
+    "task_id": 3,
+    "n": 20,
+    "a": 15,
+    "other": 8,
+    "delta": -7,
+    "wins": 2,
+    "losses": 9
+   },
+   {
+    "task_id": 4,
+    "n": 20,
+    "a": 13,
+    "other": 11,
+    "delta": -2,
+    "wins": 4,
+    "losses": 6
+   },
+   {
+    "task_id": 5,
+    "n": 20,
+    "a": 17,
+    "other": 17,
+    "delta": 0,
+    "wins": 2,
+    "losses": 2
+   },
+   {
+    "task_id": 6,
+    "n": 20,
+    "a": 19,
+    "other": 17,
+    "delta": -2,
+    "wins": 1,
+    "losses": 3
+   },
+   {
+    "task_id": 7,
+    "n": 20,
+    "a": 19,
+    "other": 15,
+    "delta": -4,
+    "wins": 0,
+    "losses": 4
+   },
+   {
+    "task_id": 8,
+    "n": 20,
+    "a": 6,
+    "other": 9,
+    "delta": 3,
+    "wins": 5,
+    "losses": 2
+   },
+   {
+    "task_id": 9,
+    "n": 20,
+    "a": 8,
+    "other": 11,
+    "delta": 3,
+    "wins": 6,
+    "losses": 3
+   }
+  ],
+  "D": [
+   {
+    "task_id": 0,
+    "n": 20,
+    "a": 13,
+    "other": 11,
+    "delta": -2,
+    "wins": 4,
+    "losses": 6
+   },
+   {
+    "task_id": 1,
+    "n": 20,
+    "a": 16,
+    "other": 19,
+    "delta": 3,
+    "wins": 4,
+    "losses": 1
+   },
+   {
+    "task_id": 2,
+    "n": 20,
+    "a": 15,
+    "other": 17,
+    "delta": 2,
+    "wins": 5,
+    "losses": 3
+   },
+   {
+    "task_id": 3,
+    "n": 20,
+    "a": 15,
+    "other": 15,
+    "delta": 0,
+    "wins": 4,
+    "losses": 4
+   },
+   {
+    "task_id": 4,
+    "n": 20,
+    "a": 13,
+    "other": 13,
+    "delta": 0,
+    "wins": 4,
+    "losses": 4
+   },
+   {
+    "task_id": 5,
+    "n": 20,
+    "a": 17,
+    "other": 11,
+    "delta": -6,
+    "wins": 1,
+    "losses": 7
+   },
+   {
+    "task_id": 6,
+    "n": 20,
+    "a": 19,
+    "other": 18,
+    "delta": -1,
+    "wins": 1,
+    "losses": 2
+   },
+   {
+    "task_id": 7,
+    "n": 20,
+    "a": 19,
+    "other": 16,
+    "delta": -3,
+    "wins": 1,
+    "losses": 4
+   },
+   {
+    "task_id": 8,
+    "n": 20,
+    "a": 6,
+    "other": 10,
+    "delta": 4,
+    "wins": 7,
+    "losses": 3
+   },
+   {
+    "task_id": 9,
+    "n": 20,
+    "a": 8,
+    "other": 16,
+    "delta": 8,
+    "wins": 9,
+    "losses": 1
+   }
+  ]
+ }
+}

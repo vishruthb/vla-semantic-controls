@@ -416,6 +416,11 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             "",
             f"- Checkpoint: `{revisions['checkpoint']}` (weights SHA-256 `{revisions['model_sha256']}`).",
             *([semantic_report_line(metrics["semantic_control"])] if metrics.get("semantic_control") else []),
+            *(
+                [f"- Policy kind: `{metrics['policy_kind']}`; semantic control active: {metrics['semantic_control_active']}; "
+                 f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."]
+                if metrics.get("policy_kind") else []
+            ),
             f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; "
             f"MuJoCo `{packages['mujoco']}`.",
             f"- PyTorch `{packages['torch']}`; Transformers `{packages['transformers']}`; "
@@ -600,6 +605,15 @@ def main() -> int:
     if policy is None:
         policy = make_policy(cfg=policy_cfg, env_cfg=env_config, rename_map={})
     policy.eval()
+    from lerobot.policies.smolvla.smolvlm_with_expert import SmolVLMWithExpertModel
+
+    semantic_control_active = (
+        type(policy.model.vlm_with_expert) is not SmolVLMWithExpertModel or hasattr(policy, "semantic_control")
+    )
+    policy_kind = "semantic_control_checkpoint" if args.checkpoint is not None else "stock_released_smolvla"
+    if args.checkpoint is None and semantic_control_active:
+        raise RuntimeError("Stock policy evaluation must not have semantic control installed")
+    print(f"Policy kind: {policy_kind} (semantic control active: {semantic_control_active})", flush=True)
     preprocessor, postprocessor = make_pre_post_processors(
         policy_cfg=policy_cfg,
         pretrained_path=policy_path,
@@ -753,7 +767,14 @@ def main() -> int:
             "cudnn_deterministic": torch.backends.cudnn.deterministic,
             "deterministic_noise": noise_protocol or {"enabled": False},
         },
+        "policy_kind": policy_kind,
+        "semantic_control_active": semantic_control_active,
         "semantic_control": semantic_info,
+        "fingerprints": {
+            "model_sha256": sha256_file(model_file),
+            "config_sha256": sha256_file(policy_path / "config.json"),
+            "protocol_sha256": None,  # filled below from eval_settings
+        },
         "revisions": {
             "checkpoint": (
                 f"local:{policy_path}" if args.checkpoint is not None
@@ -797,6 +818,9 @@ def main() -> int:
         },
         "raw_lerobot_metrics": info,
     }
+    metrics["fingerprints"]["protocol_sha256"] = hashlib.sha256(
+        json.dumps(metrics["eval_settings"], sort_keys=True, default=str).encode()
+    ).hexdigest()
     args.output = args.output.resolve()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(metrics, indent=2) + "\n")

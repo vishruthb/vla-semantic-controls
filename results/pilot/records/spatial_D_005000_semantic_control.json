@@ -1,0 +1,109 @@
+{
+  "semantic_layers": "cross_only",
+  "update_vlm": true,
+  "preset": "D",
+  "init_fingerprint": "77cc336fa87863894c3548fd4ca0d7618582cf5457be028c30cd4581685d3569",
+  "vlm_fingerprint": "120a5713cd2b162014295b7c3f8babeecf564688d31cbcb86572fc3d81567824",
+  "trainable_fp32": true,
+  "trainable_parameters": 461974432,
+  "total_parameters": 604934176,
+  "parameter_groups": {
+    "expert": {
+      "parameters": 97451872,
+      "lr": "default"
+    },
+    "vlm": {
+      "parameters": 364522560,
+      "lr": 1e-05
+    }
+  },
+  "routing": {
+    "verified": true,
+    "semantic_layers": "cross_only",
+    "update_vlm": true,
+    "coupled_layers": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "num_vlm_layers": 32,
+    "joint_layers": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30
+    ],
+    "cross_layers": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27,
+      29,
+      31
+    ],
+    "prefix_len": 141
+  },
+  "lerobot_version": "0.5.2",
+  "semantic_control_sha256": "7992b8ecf31777ad138c82736c092f3851b569d5feb81cc5a428edb6acd12bf3",
+  "mixed_precision": "bf16",
+  "training": {
+    "step": 5000,
+    "loss_last": 0.399297297000885,
+    "loss_mean_last_100": 0.4096864894032478,
+    "lr": {
+      "expert": 9.34687384344914e-05,
+      "vlm": 9.34687384344914e-06
+    },
+    "grad_norm_total_preclip_last": 2.0624077320098877,
+    "grad_norm_groups_postclip_last": {
+      "expert": 1.2268198728561401,
+      "vlm": 1.6578415632247925
+    },
+    "runtime": {
+      "process_elapsed_s": 2480.244746458018,
+      "steps_in_process": 5000,
+      "start_step_in_process": 0,
+      "mean_step_s": 0.4717550270541222
+    },
+    "peak_vram": {
+      "torch_max_allocated_gib_process": 18.5905704498291,
+      "nvidia_smi_used_mib_now": 20050
+    }
+  },
+  "step": 5000
+}

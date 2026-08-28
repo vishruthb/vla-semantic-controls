@@ -333,6 +333,14 @@ def install_hooks(
 
         metadata = {**getattr(policy, "semantic_metadata", {}), "training": checkpoint_metrics(step, optimizer), "step": step}
         path = sc.save_semantic_control(control, Path(checkpoint_dir) / PRETRAINED_MODEL_DIR, metadata)
+        # Resume only ever uses the newest checkpoint: drop earlier optimizer/RNG states to bound disk use.
+        import shutil
+
+        for earlier in sorted(Path(checkpoint_dir).parent.glob("[0-9]*")):
+            state = earlier / "training_state"
+            if earlier.name.isdigit() and int(earlier.name) < step and state.exists():
+                shutil.rmtree(state)
+                logging.info("Pruned %s", state)
         output_dir = getattr(cfg, "output_dir", None)
         flush_curve(Path(output_dir) if output_dir else Path(checkpoint_dir).parent.parent)
         logging.info("Wrote %s", path)

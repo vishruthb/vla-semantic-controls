@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .cache/
 results/raw/
+results/render/
 results/videos/
 results/*.log
 *.safetensors

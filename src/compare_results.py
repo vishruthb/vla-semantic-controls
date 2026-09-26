@@ -145,7 +145,7 @@ def main() -> int:
     rel = f"{stats['relative_delta_percent']:+.1f}%" if stats["relative_delta_percent"] is not None else "n/a"
     lines += [
         "",
-        f"## Paired: {args.candidate_label} − {args.reference_label}",
+        f"## Paired: {args.candidate_label} - {args.reference_label}",
         "",
         f"- absolute delta: **{stats['delta_points']:+.1f} pts** (relative {rel})",
         f"- paired bootstrap 95% CI: [{ci[0]:+.1f}, {ci[1]:+.1f}]",

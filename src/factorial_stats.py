@@ -193,9 +193,9 @@ def main() -> int:
         "| --- | ---: | ---: | ---: | ---: |",
     ]
     for name, label in (
-        ("vlm_update_main", "VLM-update main effect ((B−A)+(D−C))/2"),
-        ("routing_main", "routing main effect ((C−A)+(D−B))/2"),
-        ("interaction", "interaction (D−C)−(B−A)"),
+        ("vlm_update_main", "VLM-update main effect ((B-A)+(D-C))/2"),
+        ("routing_main", "routing main effect ((C-A)+(D-B))/2"),
+        ("interaction", "interaction (D-C)-(B-A)"),
     ):
         f = report["factorial_effects"][name]
         lines.append(
@@ -209,10 +209,10 @@ def main() -> int:
         "| --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     for name, label in (
-        ("B_minus_A", "B − A (VLM update, all-layer)"),
-        ("D_minus_C", "D − C (VLM update, cross-only)"),
-        ("C_minus_A", "C − A (routing, frozen)"),
-        ("D_minus_B", "D − B (routing, trainable)"),
+        ("B_minus_A", "B - A (VLM update, all-layer)"),
+        ("D_minus_C", "D - C (VLM update, cross-only)"),
+        ("C_minus_A", "C - A (routing, frozen)"),
+        ("D_minus_B", "D - B (routing, trainable)"),
     ):
         p = paired[name]
         lines.append(
@@ -221,8 +221,8 @@ def main() -> int:
         )
     lines += [
         "",
-        f"Within-episode correlation of the two VLM-update contrasts corr(B−A, D−C) = {corr_vlm:+.3f}; "
-        f"of the two routing contrasts corr(C−A, D−B) = {corr_routing:+.3f}.",
+        f"Within-episode correlation of the two VLM-update contrasts corr(B-A, D-C) = {corr_vlm:+.3f}; "
+        f"of the two routing contrasts corr(C-A, D-B) = {corr_routing:+.3f}.",
         "",
         "Per-task effects (points, 20 episodes each):",
         "",

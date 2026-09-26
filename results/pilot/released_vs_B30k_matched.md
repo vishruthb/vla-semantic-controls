@@ -10,7 +10,7 @@ Protocol fingerprints: reference `796598d68b5592a8`, candidate `796598d68b5592a8
 | C@30k | 132/200 | 66.0% | [59.2, 72.2] | [13, 16, 15, 8, 11, 17, 17, 15, 9, 11] |
 | D@30k | 146/200 | 73.0% | [66.5, 78.7] | [11, 19, 17, 15, 13, 11, 18, 16, 10, 16] |
 
-## Paired: B@30k − released SmolVLA
+## Paired: B@30k - released SmolVLA
 
 - absolute delta: **-3.5 pts** (relative -4.3%)
 - paired bootstrap 95% CI: [-11.0, +4.0]

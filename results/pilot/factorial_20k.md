@@ -4,18 +4,18 @@
 
 | effect | points | episode-stratified 95% CI | task-cluster 95% CI (10 clusters) | sign-flip p |
 | --- | ---: | ---: | ---: | ---: |
-| VLM-update main effect ((B−A)+(D−C))/2 | +7.25 | [+1.2, +13.0] | [-0.5, +14.5] | 0.026 |
-| routing main effect ((C−A)+(D−B))/2 | -1.25 | [-7.0, +4.5] | [-7.0, +4.0] | 0.745 |
-| interaction (D−C)−(B−A) | -2.50 | [-14.0, +9.5] | [-17.0, +13.0] | 0.747 |
+| VLM-update main effect ((B-A)+(D-C))/2 | +7.25 | [+1.2, +13.0] | [-0.5, +14.5] | 0.026 |
+| routing main effect ((C-A)+(D-B))/2 | -1.25 | [-7.0, +4.5] | [-7.0, +4.0] | 0.745 |
+| interaction (D-C)-(B-A) | -2.50 | [-14.0, +9.5] | [-17.0, +13.0] | 0.747 |
 
 | paired contrast | points | wins / losses / ties | McNemar p | episode-stratified 95% CI | task-cluster 95% CI |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| B − A (VLM update, all-layer) | +8.5 | 46 / 29 / 125 | 0.064 | [+0.5, +16.5] | [-2.0, +19.0] |
-| D − C (VLM update, cross-only) | +6.0 | 47 / 35 / 118 | 0.224 | [-2.5, +14.5] | [-5.0, +15.5] |
-| C − A (routing, frozen) | +0.0 | 39 / 39 / 122 | 1.000 | [-8.5, +8.0] | [-11.0, +10.5] |
-| D − B (routing, trainable) | -2.5 | 34 / 39 / 127 | 0.640 | [-10.5, +6.0] | [-9.5, +5.5] |
+| B - A (VLM update, all-layer) | +8.5 | 46 / 29 / 125 | 0.064 | [+0.5, +16.5] | [-2.0, +19.0] |
+| D - C (VLM update, cross-only) | +6.0 | 47 / 35 / 118 | 0.224 | [-2.5, +14.5] | [-5.0, +15.5] |
+| C - A (routing, frozen) | +0.0 | 39 / 39 / 122 | 1.000 | [-8.5, +8.0] | [-11.0, +10.5] |
+| D - B (routing, trainable) | -2.5 | 34 / 39 / 127 | 0.640 | [-10.5, +6.0] | [-9.5, +5.5] |
 
-Within-episode correlation of the two VLM-update contrasts corr(B−A, D−C) = +0.013; of the two routing contrasts corr(C−A, D−B) = -0.013.
+Within-episode correlation of the two VLM-update contrasts corr(B-A, D-C) = +0.013; of the two routing contrasts corr(C-A, D-B) = -0.013.
 
 Per-task effects (points, 20 episodes each):
 

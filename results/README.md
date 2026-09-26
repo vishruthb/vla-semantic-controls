@@ -54,7 +54,8 @@ byte-identically from the JSON. Two consequences:
 - `semantic_control_sha256` in the training records (`7992b8ec...`) is the hash of `src/semantic_control.py` at
   `12470de`-`b12642e`, not of the current file. Check it with
   `git show b12642e:src/semantic_control.py | sha256sum`.
-- `uv.lock` is unchanged, so the `uv_lock_sha256` recorded in every result still matches.
+- `uv.lock` differs only in the project's own name (renamed to `semantic-backbone-adaptation`); every pinned
+  dependency is identical. The recorded `uv_lock_sha256` is that of `git show b12642e:uv.lock`.
 
 ## Regenerating
 

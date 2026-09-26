@@ -1,4 +1,4 @@
-# Semantic controls for the SmolVLA action expert
+# Semantic Backbone Adaptation in Flow-Matching VLAs
 
 Does it matter where a VLA's action expert reads the vision-language model, and whether the action loss may update
 that model? We answer this for [SmolVLA](https://arxiv.org/abs/2506.01844) on

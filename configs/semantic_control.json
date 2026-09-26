@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Semantic-control presets for SmolVLA: which layers give the action expert access to VLM key/values, and whether the VLM is updated by the action loss. See tmp/arch.md section 7.",
+  "description": "Semantic-control presets for SmolVLA: which layers give the action expert access to VLM key/values, and whether the VLM is updated by the action loss. See docs/architecture.md section 7.",
   "checkpoint": {
     "repository": "lerobot/smolvla_base",
     "revision": "c83c3163b8ca9b7e67c509fffd9121e66cb96205",

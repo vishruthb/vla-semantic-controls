@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task-ids", type=int, nargs="+")
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--render-episodes-per-task", type=int)
-    parser.add_argument("--output", type=Path, default=ROOT / "results/metrics.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "results/baseline/metrics.json")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--keep-videos", action="store_true")
     parser.add_argument(

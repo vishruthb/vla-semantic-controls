@@ -34,8 +34,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 import semantic_control as sc
 
 TRAIN_LOG_FILE = "semantic_train_log.jsonl"

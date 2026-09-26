@@ -20,13 +20,12 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
 
+import semantic_control as sc
+
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-import semantic_control as sc  # noqa: E402
 
 TRAIN_ROOT = ROOT / "outputs/train"
 LOG_ROOT = ROOT / "outputs/logs"
@@ -179,8 +178,6 @@ def eval_command(
         *(["--deterministic-noise"] if deterministic else []),
         "--output",
         str(output),
-        "--report",
-        str(RESULTS_ROOT / f"{stem}.md"),
     ]
     return command, output
 

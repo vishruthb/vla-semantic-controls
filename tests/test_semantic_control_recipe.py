@@ -5,18 +5,15 @@ from __future__ import annotations
 
 import copy
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 import torch
 
+import train_semantic
 from tests import helpers
 from tests.helpers import sc
-
-sys.path.insert(0, str(helpers.SRC))
-import train_semantic
 
 
 class RecipeTests(unittest.TestCase):

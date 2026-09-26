@@ -9,5 +9,5 @@ export LIBERO_CONFIG_PATH="$PWD/.cache/libero"
 
 uv run --frozen python src/evaluate.py \
   --config configs/baseline.json \
-  --output results/metrics.json \
-  --report results/REPORT.md
+  --output results/baseline/metrics.json \
+  --report results/baseline/report.md

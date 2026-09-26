@@ -34,7 +34,7 @@ uv run --frozen python src/factorial_stats.py --step 30000 --out factorial_30k
 # released checkpoint on the same matched episodes (default config, no --checkpoint; flags reproduce the
 # recorded eval_settings), then compared with B@30k
 uv run --frozen python src/evaluate.py --deterministic-noise --render-episodes-per-task 0 \
-  --output results/pilot/released_smolvla_matched_e20.json --report results/pilot/released_smolvla_matched_e20.md
+  --output results/pilot/released_smolvla_matched_e20.json
 uv run --frozen python src/compare_results.py --reference results/pilot/released_smolvla_matched_e20.json \
   --candidate results/pilot/B_30000_e20_matched.json --context A,B,C,D:30000 \
   --out results/pilot/released_vs_B30k_matched

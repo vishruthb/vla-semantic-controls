@@ -135,7 +135,7 @@ fixed. Comparisons use paired bootstrap intervals, exact McNemar tests, and the 
 **Baseline reproduction.** The reference protocol comes from
 [zuoxingdong/smolvla-libero-eval](https://github.com/zuoxingdong/smolvla-libero-eval) (`114d19c`). On it, the
 released checkpoint scores 154/200 (77.0%, [70.7, 82.3]) against the published 163/200 (81.5%), within the 5-point
-band we set for reproduction ([`results/REPORT.md`](results/REPORT.md)). On the matched protocol, the same checkpoint
+band we set for reproduction ([`results/baseline/report.md`](results/baseline/report.md)). On the matched protocol, the same checkpoint
 scores 164/200 (82.0%). The two runs differ in how the flow-matching noise is drawn, in cuDNN/TF32 settings and in
 whether videos are rendered, yet they disagree on 32 of 200 episodes. That swing, from evaluation noise alone, is why all comparisons above are
 paired.
@@ -158,7 +158,7 @@ and the provenance of each result.
 sudo apt-get install -y libosmesa6 libglfw3 libgl1
 ./scripts/setup.sh                                   # uv sync + cache the released checkpoint and backbone
 ./scripts/smoke.sh                                   # task 0, 2 episodes
-./scripts/evaluate.sh                                # released checkpoint, reference protocol -> results/REPORT.md
+./scripts/evaluate.sh                                # released checkpoint, reference protocol -> results/baseline/
 ```
 
 Semantic-control interface and tests. The GPU test and `report` use `lerobot/smolvla_base`
@@ -185,7 +185,7 @@ uv run --frozen python src/pilot.py eval --step 30000 --episodes 20 --batch 5 --
 uv run --frozen python src/pilot.py compare --step 30000 --episodes 20 --deterministic
 uv run --frozen python src/factorial_stats.py --step 30000 --out factorial_30k
 uv run --frozen python src/evaluate.py --deterministic-noise --render-episodes-per-task 0 \
-  --output results/pilot/released_smolvla_matched_e20.json --report results/pilot/released_smolvla_matched_e20.md
+  --output results/pilot/released_smolvla_matched_e20.json
 uv run --frozen python src/compare_results.py --reference results/pilot/released_smolvla_matched_e20.json \
   --candidate results/pilot/B_30000_e20_matched.json --context A,B,C,D:30000 \
   --out results/pilot/released_vs_B30k_matched
@@ -193,7 +193,7 @@ uv run --frozen python src/compare_results.py --reference results/pilot/released
 
 Every checkpoint carries a `semantic_control.json` record: preset, fingerprints, verified routing, loss, learning
 rates, gradient norms, runtime and peak memory. `evaluate.py --checkpoint DIR` restores the routing from that record,
-verifies it on the loaded model, and refuses to run otherwise. To rebuild a stored report without a GPU, run
+verifies it on the loaded model, and refuses to run otherwise. Any result JSON renders to a markdown report without a GPU:
 `uv run --frozen python src/evaluate.py --rerender RESULT.json --report RESULT.md`.
 
 The committed evaluations kept no videos. To make rollout GIFs, re-run the tasks you want with

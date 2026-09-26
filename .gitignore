@@ -5,6 +5,8 @@ __pycache__/
 results/**/raw/
 results/render/
 results/videos/
+results/pilot/[ABCD]_*.md
+results/pilot/released_smolvla_*.md
 results/*.log
 *.safetensors
 *.bin

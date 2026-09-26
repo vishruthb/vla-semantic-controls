@@ -15,6 +15,11 @@ package = false
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "RUF100"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

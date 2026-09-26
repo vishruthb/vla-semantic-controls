@@ -10,22 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
-import numpy as np
+import eval_protocol as ep
+from evaluate import wilson_interval
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-import eval_protocol as ep  # noqa: E402
-
-
-def wilson(k: int, n: int, z: float = 1.959963984540054) -> list[float]:
-    p = k / n
-    d = 1 + z * z / n
-    c = (p + z * z / (2 * n)) / d
-    h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return [float(100 * (c - h)), float(100 * (c + h))]
 
 
 def load(path: Path) -> dict:
@@ -75,7 +65,7 @@ def main() -> int:
             "successes": int(r.sum()),
             "episodes": n,
             "percent": float(100 * r.mean()),
-            "wilson95": wilson(int(r.sum()), n),
+            "wilson95": wilson_interval(int(r.sum()), n),
             "per_task": [t["a"] for t in per_task],
             "checkpoint": ref["revisions"]["checkpoint"],
         }
@@ -95,7 +85,7 @@ def main() -> int:
                     "successes": int(v.sum()),
                     "episodes": n,
                     "percent": float(100 * v.mean()),
-                    "wilson95": wilson(int(v.sum()), n),
+                    "wilson95": wilson_interval(int(v.sum()), n),
                     "per_task": [int(x) for x in v.reshape(10, -1).sum(axis=1)],
                     "checkpoint": m["revisions"]["checkpoint"],
                 }
@@ -116,7 +106,7 @@ def main() -> int:
             "successes": int(c.sum()),
             "episodes": n,
             "percent": float(100 * c.mean()),
-            "wilson95": wilson(int(c.sum()), n),
+            "wilson95": wilson_interval(int(c.sum()), n),
             "checkpoint": cand["revisions"]["checkpoint"],
         },
         "paired_candidate_minus_reference": stats,

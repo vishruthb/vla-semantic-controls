@@ -203,8 +203,14 @@ class RealCheckpointTests(unittest.TestCase):
                 (x,), (y,) = joint_a[layer], joint_c[layer]
                 self.assertEqual(x["k_shape"], y["k_shape"])
                 self.assertTrue(torch.equal(x["mask"][:, :prefix_len, :], y["mask"][:, :prefix_len, :]), layer)
-                self.assertTrue(torch.equal(x["mask"][:, prefix_len:, prefix_len:], y["mask"][:, prefix_len:, prefix_len:]))
-                self.assertTrue(torch.equal(x["mask"][:, prefix_len:, :prefix_len], pad_vector[:, None, :].expand(-1, suffix_len, -1)))
+                self.assertTrue(
+                    torch.equal(x["mask"][:, prefix_len:, prefix_len:], y["mask"][:, prefix_len:, prefix_len:])
+                )
+                self.assertTrue(
+                    torch.equal(
+                        x["mask"][:, prefix_len:, :prefix_len], pad_vector[:, None, :].expand(-1, suffix_len, -1)
+                    )
+                )
                 self.assertFalse(y["mask"][:, prefix_len:, :prefix_len].any(), layer)
             # inference-pass masks: same story after the 16-layer cache fill
             fill = a["num_layers"]
@@ -215,7 +221,9 @@ class RealCheckpointTests(unittest.TestCase):
                 if sc.is_cross_attention_layer(x["layer"], "cross_attn", 2):
                     self.assertTrue(torch.equal(x["mask"], y["mask"]))
                 else:
-                    self.assertTrue(torch.equal(x["mask"][:, :, :prefix_len], pad_vector[:, None, :].expand(-1, suffix_len, -1)))
+                    self.assertTrue(
+                        torch.equal(x["mask"][:, :, :prefix_len], pad_vector[:, None, :].expand(-1, suffix_len, -1))
+                    )
                     self.assertFalse(y["mask"][:, :, :prefix_len].any())
                     self.assertTrue(torch.equal(x["mask"][:, :, prefix_len:], y["mask"][:, :, prefix_len:]))
             # and the expert's outputs do change
@@ -240,7 +248,9 @@ class RealCheckpointTests(unittest.TestCase):
             reads_last = last_idx in summary["coupled_layers"]
             self.assertTrue(summary["modes"]["vlm_training"], preset)
             for name, trainable in summary["requires_grad"].items():
-                self.assertEqual(trainable, helpers.expected_trainable(name, control, last_idx, reads_last), (preset, name))
+                self.assertEqual(
+                    trainable, helpers.expected_trainable(name, control, last_idx, reads_last), (preset, name)
+                )
                 norm = summary["grad_norms"][name]
                 if trainable:
                     self.assertIsNotNone(norm, (preset, name))
@@ -291,12 +301,18 @@ class RealCheckpointTests(unittest.TestCase):
         self.assertGreater(reports["B"]["total"]["trainable"], reports["A"]["total"]["trainable"])
         print("\n\nParameter counts (lerobot/smolvla_base):")
         for preset, report in reports.items():
-            print(f"\n[{preset}] {self.summaries[preset]['control'].to_dict()}  coupled layers: {self.summaries[preset]['coupled_layers']}")
+            print(
+                f"\n[{preset}] {self.summaries[preset]['control'].to_dict()}  coupled layers: {self.summaries[preset]['coupled_layers']}"
+            )
             print(sc.format_parameter_report(report))
         print("\nLosses / action checksums:")
         for preset, summary in self.summaries.items():
-            print(f"  {preset}: loss={summary['loss'].item():.6f} actions.abs().sum()={summary['actions'].abs().sum().item():.4f}")
-        print(f"  native: loss={self.native['loss'].item():.6f} actions.abs().sum()={self.native['actions'].abs().sum().item():.4f}")
+            print(
+                f"  {preset}: loss={summary['loss'].item():.6f} actions.abs().sum()={summary['actions'].abs().sum().item():.4f}"
+            )
+        print(
+            f"  native: loss={self.native['loss'].item():.6f} actions.abs().sum()={self.native['actions'].abs().sum().item():.4f}"
+        )
 
 
 if __name__ == "__main__":

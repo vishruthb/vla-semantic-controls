@@ -65,7 +65,9 @@ def install_deterministic_noise(policy, envs: dict[str, dict[int, Any]], base_se
             if len(seeds) < batch_size:  # more envs than seeds (unexpected): extend deterministically
                 seeds = seeds + [seeds[-1] + 1 + i for i in range(batch_size - len(seeds))]
             device = next(policy.parameters()).device
-            noise = episode_noise(base_seed, state["suite"], state["task"], seeds, state["step"], chunk_size, action_dim).to(device)
+            noise = episode_noise(
+                base_seed, state["suite"], state["task"], seeds, state["step"], chunk_size, action_dim
+            ).to(device)
         state["step"] += 1
         return original_select_action(observation, noise=noise, **kwargs)
 
@@ -137,7 +139,15 @@ def per_task_deltas(keys: list[tuple[int, int]], a: np.ndarray, other: np.ndarra
     rows = []
     for task_id in sorted({k[0] for k in keys}):
         mask = np.asarray([k[0] == task_id for k in keys])
-        rows.append({"task_id": task_id, "n": int(mask.sum()), "a": int(a[mask].sum()), "other": int(other[mask].sum()),
-                     "delta": int(other[mask].sum() - a[mask].sum()),
-                     "wins": int(((other - a)[mask] > 0).sum()), "losses": int(((other - a)[mask] < 0).sum())})
+        rows.append(
+            {
+                "task_id": task_id,
+                "n": int(mask.sum()),
+                "a": int(a[mask].sum()),
+                "other": int(other[mask].sum()),
+                "delta": int(other[mask].sum() - a[mask].sum()),
+                "wins": int(((other - a)[mask] > 0).sum()),
+                "losses": int(((other - a)[mask] < 0).sum()),
+            }
+        )
     return rows

@@ -113,9 +113,7 @@ def make_batch(
 
 def fixed_noise_and_time(policy, batch_size: int = 2, seed: int = 1) -> tuple[torch.Tensor, torch.Tensor]:
     generator = torch.Generator().manual_seed(seed)
-    noise = torch.randn(
-        (batch_size, policy.config.chunk_size, policy.config.max_action_dim), generator=generator
-    )
+    noise = torch.randn((batch_size, policy.config.chunk_size, policy.config.max_action_dim), generator=generator)
     time = torch.linspace(0.25, 0.75, batch_size)
     return noise, time
 

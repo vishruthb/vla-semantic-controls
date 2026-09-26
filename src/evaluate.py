@@ -21,7 +21,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "configs/baseline.json"
 
@@ -154,9 +153,7 @@ class NvidiaMemoryMonitor:
 
     @staticmethod
     def _sample() -> int | None:
-        value = command_output(
-            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits", "-i", "0"]
-        )
+        value = command_output(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits", "-i", "0"])
         if value is None:
             return None
         try:
@@ -195,9 +192,7 @@ def wilson_interval(successes: int, episodes: int) -> tuple[float, float]:
     proportion = successes / episodes
     denominator = 1 + z**2 / episodes
     center = (proportion + z**2 / (2 * episodes)) / denominator
-    half_width = z * math.sqrt(
-        proportion * (1 - proportion) / episodes + z**2 / (4 * episodes**2)
-    ) / denominator
+    half_width = z * math.sqrt(proportion * (1 - proportion) / episodes + z**2 / (4 * episodes**2)) / denominator
     return 100 * (center - half_width), 100 * (center + half_width)
 
 
@@ -233,9 +228,7 @@ def is_baseline_protocol(config: dict[str, Any], settings: dict[str, Any]) -> bo
     )
 
 
-def describe_per_task_spread(
-    per_task: list[dict[str, Any]], deltas: list[float], threshold: float
-) -> str:
+def describe_per_task_spread(per_task: list[dict[str, Any]], deltas: list[float], threshold: float) -> str:
     """Summarize where the difference to the reference comes from, without presuming a direction."""
     if len(deltas) < 2:
         return (
@@ -252,9 +245,7 @@ def describe_per_task_spread(
         parts.append(f"largest deficits are task(s) {human_join(deficits)}")
     if improvements:
         parts.append(f"largest improvements are task(s) {human_join(improvements)}")
-    lost_episodes = [
-        -deltas[i] * per_task[i]["episodes"] / 100 for i in range(len(deltas)) if deltas[i] < 0
-    ]
+    lost_episodes = [-deltas[i] * per_task[i]["episodes"] / 100 for i in range(len(deltas)) if deltas[i] < 0]
     if lost_episodes:
         worst = order[0]
         share = (-deltas[worst] * per_task[worst]["episodes"] / 100) / sum(lost_episodes)
@@ -270,9 +261,7 @@ def describe_per_task_spread(
     return f"Per-task deltas: {'; '.join(parts)}; {verdict}."
 
 
-def build_diagnostics(
-    config: dict[str, Any], result: dict[str, Any], comparable: bool
-) -> dict[str, Any]:
+def build_diagnostics(config: dict[str, Any], result: dict[str, Any], comparable: bool) -> dict[str, Any]:
     """Derive the status and the diagnosis bullets from the measured result only."""
     target = config["target"]
     reference = target["reference_success_percent"]
@@ -304,12 +293,8 @@ def build_diagnostics(
         f"{reference_interval[0]:.1f}-{reference_interval[1]:.1f}%). Episode dependence makes this only a diagnostic."
     )
     per_task_deltas: list[float] | None = None
-    if reference_per_task is not None and all(
-        task["task_id"] < len(reference_per_task) for task in per_task
-    ):
-        per_task_deltas = [
-            task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task
-        ]
+    if reference_per_task is not None and all(task["task_id"] < len(reference_per_task) for task in per_task):
+        per_task_deltas = [task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task]
         bullets.append(describe_per_task_spread(per_task, per_task_deltas, threshold))
     else:
         bullets.append("No per-task reference covers these tasks; per-task deltas were not computed.")
@@ -359,9 +344,7 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
     reference_per_task = target.get("reference_per_task_success_percent")
     gpu_fields = [field.strip() for field in str(system["gpu"] or "unknown").split(",")]
     gpu_summary = (
-        f"{gpu_fields[0]}, driver {gpu_fields[1]}, {gpu_fields[2]} MiB"
-        if len(gpu_fields) == 3
-        else system["gpu"]
+        f"{gpu_fields[0]}, driver {gpu_fields[1]}, {gpu_fields[2]} MiB" if len(gpu_fields) == 3 else system["gpu"]
     )
     latency = timing["policy_latency_ms"]
     rows = [
@@ -381,13 +364,12 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             else None
         )
         reference_cell = f"{reference_task:.1f}%" if reference_task is not None else "n/a"
-        delta_cell = (
-            f"{task['success_percent'] - reference_task:+.1f}" if reference_task is not None else "n/a"
-        )
+        delta_cell = f"{task['success_percent'] - reference_task:+.1f}" if reference_task is not None else "n/a"
         rows.append(
             f"| {task['task_id']}: {task['language']} | {task['success_percent']:.1f}% "
             f"({task['successes']}/{task['episodes']}) | {reference_cell} | {delta_cell} |"
         )
+
     def flag(key: str, on: str, off: str) -> str:
         value = settings[key]
         return "n/a" if value == "n/a" else (on if value else off)
@@ -417,12 +399,14 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             f"- Checkpoint: `{revisions['checkpoint']}` (weights SHA-256 `{revisions['model_sha256']}`).",
             *([semantic_report_line(metrics["semantic_control"])] if metrics.get("semantic_control") else []),
             *(
-                [f"- Policy kind: `{metrics['policy_kind']}`; semantic control active: {metrics['semantic_control_active']}; "
-                 f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."]
-                if metrics.get("policy_kind") else []
+                [
+                    f"- Policy kind: `{metrics['policy_kind']}`; semantic control active: {metrics['semantic_control_active']}; "
+                    f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."
+                ]
+                if metrics.get("policy_kind")
+                else []
             ),
-            f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; "
-            f"MuJoCo `{packages['mujoco']}`.",
+            f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; MuJoCo `{packages['mujoco']}`.",
             f"- PyTorch `{packages['torch']}`; Transformers `{packages['transformers']}`; "
             f"complete dependency resolution in `uv.lock` (SHA-256 `{revisions['uv_lock_sha256']}`).",
             f"- Harness revision: `{revisions['repo'] or 'uncommitted worktree (no Git HEAD)'}`; "
@@ -509,7 +493,7 @@ def main() -> int:
         raise ValueError("Require episodes >= batch_size >= 1")
 
     # Imports happen after renderer/thread environment variables are fixed.
-    import torch
+    import torch  # noqa: I001 - keep the pinned import order (libero before lerobot)
     from libero.libero import benchmark
     from lerobot.configs.policies import PreTrainedConfig
     from lerobot.envs import make_env, make_env_pre_post_processors
@@ -524,9 +508,7 @@ def main() -> int:
         import semantic_control as sc
 
         policy_path = args.checkpoint.resolve()
-        requested = (
-            sc.SemanticControlConfig.from_preset(args.semantic_control) if args.semantic_control else None
-        )
+        requested = sc.SemanticControlConfig.from_preset(args.semantic_control) if args.semantic_control else None
         policy, control, semantic_info = sc.load_policy_with_control(
             policy_path,
             requested,
@@ -588,7 +570,9 @@ def main() -> int:
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"Loading {policy_path}" if args.checkpoint is not None else f"Loading {model_cfg['repository']}@{model_cfg['revision']}",
+        f"Loading {policy_path}"
+        if args.checkpoint is not None
+        else f"Loading {model_cfg['repository']}@{model_cfg['revision']}",
         flush=True,
     )
     print(
@@ -607,8 +591,8 @@ def main() -> int:
     policy.eval()
     from lerobot.policies.smolvla.smolvlm_with_expert import SmolVLMWithExpertModel
 
-    semantic_control_active = (
-        type(policy.model.vlm_with_expert) is not SmolVLMWithExpertModel or hasattr(policy, "semantic_control")
+    semantic_control_active = type(policy.model.vlm_with_expert) is not SmolVLMWithExpertModel or hasattr(
+        policy, "semantic_control"
     )
     policy_kind = "semantic_control_checkpoint" if args.checkpoint is not None else "stock_released_smolvla"
     if args.checkpoint is None and semantic_control_active:
@@ -623,9 +607,7 @@ def main() -> int:
             "tokenizer_processor": {"tokenizer_name": str(backbone_path)},
         },
     )
-    env_preprocessor, env_postprocessor = make_env_pre_post_processors(
-        env_cfg=env_config, policy_cfg=policy_cfg
-    )
+    env_preprocessor, env_postprocessor = make_env_pre_post_processors(env_cfg=env_config, policy_cfg=policy_cfg)
 
     noise_protocol = None
     if args.deterministic_noise:
@@ -777,16 +759,17 @@ def main() -> int:
         },
         "revisions": {
             "checkpoint": (
-                f"local:{policy_path}" if args.checkpoint is not None
+                f"local:{policy_path}"
+                if args.checkpoint is not None
                 else f"{model_cfg['repository']}@{model_cfg['revision']}"
             ),
             "backbone": (
-                str(backbone_path) if args.checkpoint is not None
+                str(backbone_path)
+                if args.checkpoint is not None
                 else f"{model_cfg['backbone_repository']}@{model_cfg['backbone_revision']}"
             ),
             "libero_assets": (
-                f"{config['sources']['libero_assets_repository']}@"
-                f"{config['sources']['libero_assets_revision']}"
+                f"{config['sources']['libero_assets_repository']}@{config['sources']['libero_assets_revision']}"
             ),
             "lerobot": f"{config['sources']['lerobot_repository']}@{config['sources']['lerobot_revision']}",
             "reference_evaluation": (

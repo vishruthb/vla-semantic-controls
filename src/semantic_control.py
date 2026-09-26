@@ -51,9 +51,7 @@ class SemanticControlConfig:
 
     def __post_init__(self) -> None:
         if self.semantic_layers not in SEMANTIC_LAYER_CHOICES:
-            raise ValueError(
-                f"semantic_layers must be one of {SEMANTIC_LAYER_CHOICES}, got {self.semantic_layers!r}"
-            )
+            raise ValueError(f"semantic_layers must be one of {SEMANTIC_LAYER_CHOICES}, got {self.semantic_layers!r}")
         if not isinstance(self.update_vlm, bool):
             raise TypeError(f"update_vlm must be a bool, got {type(self.update_vlm).__name__}")
 
@@ -217,9 +215,7 @@ class SemanticSmolVLMWithExpertModel(_import_upstream()):
         )
 
     @staticmethod
-    def _hide_prefix_from_suffix(
-        attention_mask, inputs_embeds, layer_idx, use_cache, fill_kv_cache, past_key_values
-    ):
+    def _hide_prefix_from_suffix(attention_mask, inputs_embeds, layer_idx, use_cache, fill_kv_cache, past_key_values):
         """Return a copy of ``attention_mask`` in which suffix (action) queries cannot see prefix keys.
 
         Prefix rows are left untouched, so the VLM stream is unaffected. Masked logits receive the
@@ -635,9 +631,7 @@ def verify_routing(policy: nn.Module, control: SemanticControlConfig | None = No
     expected_cross = [idx for idx in range(vwe.num_vlm_layers) if vwe.is_cross_attn_layer(idx)]
     if observed["cross_layers"] != expected_cross:
         raise RoutingError(f"Cross-attention layers {observed['cross_layers']} != expected {expected_cross}")
-    trainable_vlm = any(
-        p.requires_grad for n, p in policy.named_parameters() if ".vlm_with_expert.vlm." in n
-    )
+    trainable_vlm = any(p.requires_grad for n, p in policy.named_parameters() if ".vlm_with_expert.vlm." in n)
     if trainable_vlm != control.update_vlm:
         raise RoutingError(f"update_vlm={control.update_vlm} but VLM parameters trainable={trainable_vlm}")
     return {
@@ -702,9 +696,7 @@ def load_policy_with_control(
             "pass one explicitly (native SmolVLA routing is preset A)"
         )
     if control is not None and saved is not None and control != saved:
-        raise RoutingError(
-            f"Requested {control.to_dict()} but {control_file} records {saved.to_dict()}"
-        )
+        raise RoutingError(f"Requested {control.to_dict()} but {control_file} records {saved.to_dict()}")
     effective = control or saved
     policy = build_policy(effective, checkpoint, backbone, device, policy_config_overrides)
     info: dict[str, Any] = {

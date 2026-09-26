@@ -63,7 +63,9 @@ class RoutingLogicTests(unittest.TestCase):
         self.assertEqual(kinds, [False, True, False, True, False, True])
         self.assertTrue(all(sc.is_cross_attention_layer(i, "cross_attn", -1) for i in range(6)))
         self.assertFalse(any(sc.is_cross_attention_layer(i, "self_attn", 2) for i in range(6)))
-        self.assertEqual([sc.is_cross_attention_layer(i, "cross_attn", 3) for i in range(6)], [False, True, True, False, True, True])
+        self.assertEqual(
+            [sc.is_cross_attention_layer(i, "cross_attn", 3) for i in range(6)], [False, True, True, False, True, True]
+        )
 
 
 class TinyModelTests(unittest.TestCase):
@@ -243,7 +245,9 @@ class TinyModelTests(unittest.TestCase):
                 # native: every suffix row sees exactly the valid (non-padded) prefix tokens
                 pad_mask = a["mask"][:, :prefix_len, :prefix_len].diagonal(dim1=1, dim2=2)
                 self.assertTrue(pad_mask.any() and not pad_mask.all())  # the fixture has padded language tokens
-                self.assertTrue(torch.equal(a["mask"][:, prefix_len:, :prefix_len], pad_mask[:, None, :].expand(-1, suffix_len, -1)))
+                self.assertTrue(
+                    torch.equal(a["mask"][:, prefix_len:, :prefix_len], pad_mask[:, None, :].expand(-1, suffix_len, -1))
+                )
                 self.assertFalse(c["mask"][:, prefix_len:, :prefix_len].any())
                 causal = torch.tril(torch.ones(suffix_len, suffix_len, dtype=torch.bool))
                 self.assertTrue(torch.equal(c["mask"][0, prefix_len:, prefix_len:], causal))
@@ -275,7 +279,9 @@ class TinyModelTests(unittest.TestCase):
                 self.assertEqual(c["k_shape"][1], a["k_shape"][1])
             else:
                 prefix_len = a["k_shape"][1] - suffix_len
-                self.assertTrue(torch.equal(a["mask"][:, :, :prefix_len], pad_mask[:, None, :].expand(-1, suffix_len, -1)))
+                self.assertTrue(
+                    torch.equal(a["mask"][:, :, :prefix_len], pad_mask[:, None, :].expand(-1, suffix_len, -1))
+                )
                 self.assertFalse(c["mask"][:, :, :prefix_len].any())
                 self.assertTrue(torch.equal(a["mask"][:, :, prefix_len:], c["mask"][:, :, prefix_len:]))
 

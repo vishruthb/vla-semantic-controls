@@ -34,7 +34,9 @@ class RecipeTests(unittest.TestCase):
         cls._tmp.cleanup()
 
     def policy_for(self, preset: str):
-        return sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset(preset))
+        return sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset(preset)
+        )
 
     # -- verification by observation -------------------------------------------------------------
 
@@ -202,7 +204,9 @@ class PilotHookTests(unittest.TestCase):
         cls._tmp.cleanup()
 
     def test_parameter_groups(self):
-        policy_b = sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("B"))
+        policy_b = sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("B")
+        )
         groups = train_semantic.parameter_groups(policy_b, vlm_lr=1e-5)
         self.assertEqual([g["name"] for g in groups], ["expert", "vlm"])
         self.assertEqual(groups[1]["lr"], 1e-5)
@@ -210,14 +214,22 @@ class PilotHookTests(unittest.TestCase):
         trainable = sum(p.numel() for p in policy_b.parameters() if p.requires_grad)
         self.assertEqual(sum(p.numel() for g in groups for p in g["params"]), trainable)
         self.assertTrue(all(p.requires_grad for g in groups for p in g["params"]))
-        policy_a = sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("A"))
+        policy_a = sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("A")
+        )
         self.assertEqual([g["name"] for g in train_semantic.parameter_groups(policy_a, 1e-5)], ["expert"])
         opt = torch.optim.AdamW(groups, lr=1e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=1e-10)
         self.assertEqual([g["lr"] for g in opt.param_groups], [1e-4, 1e-5])
 
     def test_parse_pilot_args(self):
         control, args, rest = train_semantic.parse_semantic_args(
-            ["--semantic.preset=B", "--semantic.vlm_lr=1e-5", "--semantic.stop_at=5000", "--semantic.save_at=2000,10000", "--steps=30000"]
+            [
+                "--semantic.preset=B",
+                "--semantic.vlm_lr=1e-5",
+                "--semantic.stop_at=5000",
+                "--semantic.save_at=2000,10000",
+                "--steps=30000",
+            ]
         )
         self.assertEqual(control.preset, "B")
         self.assertEqual(args.vlm_lr, 1e-5)
@@ -248,12 +260,24 @@ class PilotHookTests(unittest.TestCase):
         import importlib
 
         train_module = importlib.import_module("lerobot.scripts.lerobot_train")
-        saved = {n: getattr(train_module, n) for n in ("make_policy", "save_checkpoint", "update_last_checkpoint", "update_policy", "make_optimizer_and_scheduler")}
+        saved = {
+            n: getattr(train_module, n)
+            for n in (
+                "make_policy",
+                "save_checkpoint",
+                "update_last_checkpoint",
+                "update_policy",
+                "make_optimizer_and_scheduler",
+            )
+        }
         base = self.base_policy
         calls, links = [], []
         try:
             train_module.make_policy = lambda cfg, ds_meta=None, env_cfg=None, rename_map=None: copy.deepcopy(base)
-            train_module.save_checkpoint = lambda checkpoint_dir, step, cfg, policy, optimizer, scheduler=None, **kw: (calls.append(step), policy.save_pretrained(Path(checkpoint_dir) / "pretrained_model"))
+            train_module.save_checkpoint = lambda checkpoint_dir, step, cfg, policy, optimizer, scheduler=None, **kw: (
+                calls.append(step),
+                policy.save_pretrained(Path(checkpoint_dir) / "pretrained_model"),
+            )
             train_module.update_last_checkpoint = lambda checkpoint_dir: links.append(checkpoint_dir)
             control = sc.SemanticControlConfig.from_preset("C")
             module, originals = train_semantic.install_hooks(control, trainable_fp32=False, stop_at=2, save_at=[2])

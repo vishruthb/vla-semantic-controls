@@ -110,8 +110,14 @@ def cast_trainable_to_fp32(policy) -> int:
     model = policy.model
     vwe = model.vlm_with_expert
     vlm_model = vwe.get_vlm_model()
-    blocks = [vwe.lm_expert, model.state_proj, model.action_in_proj, model.action_out_proj,
-              model.action_time_mlp_in, model.action_time_mlp_out]
+    blocks = [
+        vwe.lm_expert,
+        model.state_proj,
+        model.action_in_proj,
+        model.action_out_proj,
+        model.action_time_mlp_in,
+        model.action_time_mlp_out,
+    ]
     if any(p.requires_grad for p in vwe.vlm.parameters()):
         blocks += [vlm_model.text_model, vlm_model.connector]
     count = 0
@@ -193,13 +199,31 @@ def install_hooks(
 
     originals = {
         name: getattr(train_module, name)
-        for name in ("make_policy", "save_checkpoint", "update_last_checkpoint", "update_policy", "make_optimizer_and_scheduler")
+        for name in (
+            "make_policy",
+            "save_checkpoint",
+            "update_last_checkpoint",
+            "update_policy",
+            "make_optimizer_and_scheduler",
+        )
     }
     STATE.clear()
     STATE.update(
-        control=control, trainable_fp32=trainable_fp32, vlm_lr=vlm_lr, stop_at=stop_at, save_at=save_at,
-        step=0, start_step=0, t_start=time.perf_counter(), curve=[], unflushed=0, peak_mem_gib=0.0,
-        group_grad_norms=None, skipped_save=False, steps_in_process=0, step_seconds=0.0,
+        control=control,
+        trainable_fp32=trainable_fp32,
+        vlm_lr=vlm_lr,
+        stop_at=stop_at,
+        save_at=save_at,
+        step=0,
+        start_step=0,
+        t_start=time.perf_counter(),
+        curve=[],
+        unflushed=0,
+        peak_mem_gib=0.0,
+        group_grad_norms=None,
+        skipped_save=False,
+        steps_in_process=0,
+        step_seconds=0.0,
     )
 
     def make_policy_with_control(cfg, ds_meta=None, env_cfg=None, rename_map=None):
@@ -207,7 +231,9 @@ def install_hooks(
         pretrained = getattr(cfg, "pretrained_path", None)
         resumed = resumed_metadata(pretrained)
         if resumed is not None and resumed["control"] != control:
-            raise sc.RoutingError(f"Resuming {pretrained} recorded {resumed['control'].to_dict()}, requested {control.to_dict()}")
+            raise sc.RoutingError(
+                f"Resuming {pretrained} recorded {resumed['control'].to_dict()}, requested {control.to_dict()}"
+            )
         sc.install_semantic_control(policy, control)
         cast = 0
         if trainable_fp32:
@@ -224,7 +250,10 @@ def install_hooks(
             "trainable_fp32": trainable_fp32,
             "trainable_parameters": report["total"]["trainable"],
             "total_parameters": report["total"]["total"],
-            "parameter_groups": {g["name"]: {"parameters": sum(p.numel() for p in g["params"]), "lr": g.get("lr", "default")} for g in groups},
+            "parameter_groups": {
+                g["name"]: {"parameters": sum(p.numel() for p in g["params"]), "lr": g.get("lr", "default")}
+                for g in groups
+            },
             "routing": routing,
             **provenance(),
         }
@@ -242,8 +271,13 @@ def install_hooks(
         policy.semantic_metadata = metadata
         logging.info(
             "Semantic control %s installed: coupled layers %s, trainable %s of %s, %s cast to fp32, groups %s, init %s",
-            control.to_dict(), routing["coupled_layers"], f"{report['total']['trainable']:,}",
-            f"{report['total']['total']:,}", f"{cast:,}", metadata["parameter_groups"], metadata["init_fingerprint"][:16],
+            control.to_dict(),
+            routing["coupled_layers"],
+            f"{report['total']['trainable']:,}",
+            f"{report['total']['total']:,}",
+            f"{cast:,}",
+            metadata["parameter_groups"],
+            metadata["init_fingerprint"][:16],
         )
         return policy
 
@@ -261,7 +295,9 @@ def install_hooks(
         STATE["optimizer"] = optimizer
         return optimizer, scheduler
 
-    def update_policy_with_curve(train_metrics, policy, batch, optimizer, grad_clip_norm, accelerator, lr_scheduler=None, **kwargs):
+    def update_policy_with_curve(
+        train_metrics, policy, batch, optimizer, grad_clip_norm, accelerator, lr_scheduler=None, **kwargs
+    ):
         t0 = time.perf_counter()
         train_metrics, output_dict = originals["update_policy"](
             train_metrics, policy, batch, optimizer, grad_clip_norm, accelerator, lr_scheduler=lr_scheduler, **kwargs
@@ -310,7 +346,9 @@ def install_hooks(
             "step": step,
             "loss_last": STATE["curve"][-1]["loss"] if STATE["curve"] else None,
             "loss_mean_last_100": sum(recent) / len(recent) if recent else None,
-            "lr": {g.get("name", f"group{i}"): g["lr"] for i, g in enumerate(optimizer.param_groups)} if optimizer is not None else None,
+            "lr": {g.get("name", f"group{i}"): g["lr"] for i, g in enumerate(optimizer.param_groups)}
+            if optimizer is not None
+            else None,
             "grad_norm_total_preclip_last": STATE["curve"][-1]["grad_norm_total_preclip"] if STATE["curve"] else None,
             "grad_norm_groups_postclip_last": STATE.get("group_grad_norms"),
             "runtime": {
@@ -319,7 +357,10 @@ def install_hooks(
                 "start_step_in_process": STATE["start_step"],
                 "mean_step_s": STATE["step_seconds"] / max(1, STATE["steps_in_process"]),
             },
-            "peak_vram": {"torch_max_allocated_gib_process": STATE["peak_mem_gib"], "nvidia_smi_used_mib_now": nvidia_smi_used_mib()},
+            "peak_vram": {
+                "torch_max_allocated_gib_process": STATE["peak_mem_gib"],
+                "nvidia_smi_used_mib_now": nvidia_smi_used_mib(),
+            },
         }
 
     def save_checkpoint_with_control(checkpoint_dir, step, cfg, policy, optimizer, scheduler=None, **kwargs):
@@ -331,7 +372,11 @@ def install_hooks(
         originals["save_checkpoint"](checkpoint_dir, step, cfg, policy, optimizer, scheduler, **kwargs)
         from lerobot.utils.constants import PRETRAINED_MODEL_DIR
 
-        metadata = {**getattr(policy, "semantic_metadata", {}), "training": checkpoint_metrics(step, optimizer), "step": step}
+        metadata = {
+            **getattr(policy, "semantic_metadata", {}),
+            "training": checkpoint_metrics(step, optimizer),
+            "step": step,
+        }
         path = sc.save_semantic_control(control, Path(checkpoint_dir) / PRETRAINED_MODEL_DIR, metadata)
         # Resume only ever uses the newest checkpoint: drop earlier optimizer/RNG states to bound disk use.
         import shutil

@@ -1,7 +1,7 @@
 [project]
-name = "smolvla-libero-baseline"
+name = "semantic-backbone-adaptation"
 version = "0.1.0"
-description = "Pinned SmolVLA baseline evaluation on LIBERO-Spatial"
+description = "Semantic Backbone Adaptation in Flow-Matching VLAs"
 requires-python = "==3.12.*"
 dependencies = [
   "hf-libero==0.1.4",
@@ -11,3 +11,15 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "RUF100"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

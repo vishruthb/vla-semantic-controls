@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Download the data files of an episode range of HuggingFaceVLA/libero into the LeRobot hub cache.
+"""download the data files of an episode range of HuggingFaceVLA/libero into the lerobot hub cache.
 
-The Hub revision's ``meta/episodes`` file map is wrong (it points episodes 1261-1692 at files that
+the hub revision's ``meta/episodes`` file map is wrong (it points episodes 1261-1692 at files that
 hold episodes 137-174 and stops at file 68 of 377), so the true file -> episode map is rebuilt from
 each parquet footer's column statistics (footer-only reads), the right files are fetched, and the
-LeRobot loader is verified to yield exactly the requested episodes.
+lerobot loader is verified to yield exactly the requested episodes.
 
-    python src/fetch_libero_subset.py            # LIBERO-Spatial: episodes 1261-1692
+    python src/fetch_libero_subset.py            # libero-spatial: episodes 1261-1692
     python src/fetch_libero_subset.py --lo 0 --hi 431
 """
 
@@ -54,15 +54,29 @@ def main() -> int:
     wanted = [r for r in rows if r[2] >= args.lo and r[1] <= args.hi]
     print(f"files covering episodes {args.lo}-{args.hi}: {len(wanted)} ({sum(r[3] for r in wanted)} rows)", flush=True)
     args.map_out.parent.mkdir(parents=True, exist_ok=True)
-    args.map_out.write_text(json.dumps({"repo": args.repo, "revision": args.revision, "map": rows, "wanted": [r[0] for r in wanted]}, indent=1))
-    snapshot_download(args.repo, repo_type="dataset", revision=args.revision, cache_dir=HF_LEROBOT_HUB_CACHE, allow_patterns=[r[0] for r in wanted])
+    args.map_out.write_text(
+        json.dumps(
+            {"repo": args.repo, "revision": args.revision, "map": rows, "wanted": [r[0] for r in wanted]}, indent=1
+        )
+    )
+    snapshot_download(
+        args.repo,
+        repo_type="dataset",
+        revision=args.revision,
+        cache_dir=HF_LEROBOT_HUB_CACHE,
+        allow_patterns=[r[0] for r in wanted],
+    )
 
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     dataset = LeRobotDataset(args.repo, episodes=list(range(args.lo, args.hi + 1)), revision=args.revision)
     first, last = dataset[0], dataset[dataset.num_frames - 1]
-    print(f"LeRobotDataset: {dataset.num_episodes} episodes, {dataset.num_frames} frames; first episode {int(first['episode_index'])} "
-          f"({first['task']}), last {int(last['episode_index'])} ({last['task']}); {time.time() - started:.0f}s", flush=True)
+    print(
+        f"LeRobotDataset: {dataset.num_episodes} episodes, {dataset.num_frames} frames; "
+        f"first episode {int(first['episode_index'])} ({first['task']}), "
+        f"last {int(last['episode_index'])} ({last['task']}); {time.time() - started:.0f}s",
+        flush=True,
+    )
     return 0
 
 

@@ -12,4 +12,4 @@ uv run --frozen python src/evaluate.py \
   --episodes-per-task 2 \
   --batch-size 2 \
   --render-episodes-per-task 1 \
-  --output results/smoke_metrics.json
+  --output outputs/smoke/metrics.json

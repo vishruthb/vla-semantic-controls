@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the pinned SmolVLA LIBERO-Spatial evaluation and record provenance."""
+"""run the pinned smolvla libero-spatial evaluation and record provenance."""
 
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "configs/baseline.json"
 
@@ -33,14 +32,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task-ids", type=int, nargs="+")
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--render-episodes-per-task", type=int)
-    parser.add_argument("--output", type=Path, default=ROOT / "results/metrics.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "results/baseline/metrics.json")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--keep-videos", action="store_true")
     parser.add_argument(
         "--checkpoint",
         type=Path,
         metavar="PRETRAINED_MODEL_DIR",
-        help="Evaluate a local LeRobot checkpoint (…/checkpoints/<step>/pretrained_model) instead of the "
+        help="Evaluate a local LeRobot checkpoint (.../checkpoints/<step>/pretrained_model) instead of the "
         "pinned Hub snapshot; semantic routing is restored from its semantic_control.json and verified",
     )
     parser.add_argument(
@@ -80,7 +79,7 @@ def configure_process() -> None:
 
 
 def ensure_libero_config() -> None:
-    """Create LIBERO's default asset map without its interactive first-import prompt."""
+    """create libero's default asset map without its interactive first-import prompt."""
     spec = importlib.util.find_spec("libero")
     if spec is None or not spec.submodule_search_locations:
         raise RuntimeError("The pinned hf-libero package is not installed")
@@ -154,9 +153,7 @@ class NvidiaMemoryMonitor:
 
     @staticmethod
     def _sample() -> int | None:
-        value = command_output(
-            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits", "-i", "0"]
-        )
+        value = command_output(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits", "-i", "0"])
         if value is None:
             return None
         try:
@@ -190,14 +187,12 @@ def percentile(values: list[float], q: float) -> float | None:
 
 
 def wilson_interval(successes: int, episodes: int) -> tuple[float, float]:
-    """Return an approximate 95% Wilson interval as percentages."""
+    """return an approximate 95% wilson interval as percentages."""
     z = 1.959963984540054
     proportion = successes / episodes
     denominator = 1 + z**2 / episodes
     center = (proportion + z**2 / (2 * episodes)) / denominator
-    half_width = z * math.sqrt(
-        proportion * (1 - proportion) / episodes + z**2 / (4 * episodes**2)
-    ) / denominator
+    half_width = z * math.sqrt(proportion * (1 - proportion) / episodes + z**2 / (4 * episodes**2)) / denominator
     return 100 * (center - half_width), 100 * (center + half_width)
 
 
@@ -233,10 +228,8 @@ def is_baseline_protocol(config: dict[str, Any], settings: dict[str, Any]) -> bo
     )
 
 
-def describe_per_task_spread(
-    per_task: list[dict[str, Any]], deltas: list[float], threshold: float
-) -> str:
-    """Summarize where the difference to the reference comes from, without presuming a direction."""
+def describe_per_task_spread(per_task: list[dict[str, Any]], deltas: list[float], threshold: float) -> str:
+    """summarize where the difference to the reference comes from, without presuming a direction."""
     if len(deltas) < 2:
         return (
             f"Only task {per_task[0]['task_id']} was evaluated ({deltas[0]:+.1f} points versus its "
@@ -252,9 +245,7 @@ def describe_per_task_spread(
         parts.append(f"largest deficits are task(s) {human_join(deficits)}")
     if improvements:
         parts.append(f"largest improvements are task(s) {human_join(improvements)}")
-    lost_episodes = [
-        -deltas[i] * per_task[i]["episodes"] / 100 for i in range(len(deltas)) if deltas[i] < 0
-    ]
+    lost_episodes = [-deltas[i] * per_task[i]["episodes"] / 100 for i in range(len(deltas)) if deltas[i] < 0]
     if lost_episodes:
         worst = order[0]
         share = (-deltas[worst] * per_task[worst]["episodes"] / 100) / sum(lost_episodes)
@@ -270,10 +261,8 @@ def describe_per_task_spread(
     return f"Per-task deltas: {'; '.join(parts)}; {verdict}."
 
 
-def build_diagnostics(
-    config: dict[str, Any], result: dict[str, Any], comparable: bool
-) -> dict[str, Any]:
-    """Derive the status and the diagnosis bullets from the measured result only."""
+def build_diagnostics(config: dict[str, Any], result: dict[str, Any], comparable: bool) -> dict[str, Any]:
+    """derive the status and the diagnosis bullets from the measured result only."""
     target = config["target"]
     reference = target["reference_success_percent"]
     threshold = target["material_difference_percentage_points"]
@@ -304,12 +293,8 @@ def build_diagnostics(
         f"{reference_interval[0]:.1f}-{reference_interval[1]:.1f}%). Episode dependence makes this only a diagnostic."
     )
     per_task_deltas: list[float] | None = None
-    if reference_per_task is not None and all(
-        task["task_id"] < len(reference_per_task) for task in per_task
-    ):
-        per_task_deltas = [
-            task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task
-        ]
+    if reference_per_task is not None and all(task["task_id"] < len(reference_per_task) for task in per_task):
+        per_task_deltas = [task["success_percent"] - reference_per_task[task["task_id"]] for task in per_task]
         bullets.append(describe_per_task_spread(per_task, per_task_deltas, threshold))
     else:
         bullets.append("No per-task reference covers these tasks; per-task deltas were not computed.")
@@ -331,7 +316,7 @@ def build_diagnostics(
 
 
 class Tolerant(dict):
-    """Dict view that renders missing keys as 'n/a' so older metrics files still report."""
+    """dict view that renders missing keys as 'n/a' so older metrics files still report."""
 
     def __getitem__(self, key: str) -> Any:
         return super().get(key, "n/a")
@@ -359,15 +344,13 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
     reference_per_task = target.get("reference_per_task_success_percent")
     gpu_fields = [field.strip() for field in str(system["gpu"] or "unknown").split(",")]
     gpu_summary = (
-        f"{gpu_fields[0]}, driver {gpu_fields[1]}, {gpu_fields[2]} MiB"
-        if len(gpu_fields) == 3
-        else system["gpu"]
+        f"{gpu_fields[0]}, driver {gpu_fields[1]}, {gpu_fields[2]} MiB" if len(gpu_fields) == 3 else system["gpu"]
     )
     latency = timing["policy_latency_ms"]
     rows = [
         f"# {title}",
         "",
-        f"**Status: {status_text} — {result['successes']}/{result['episodes']} successes "
+        f"**Status: {status_text} -- {result['successes']}/{result['episodes']} successes "
         f"({result['overall_success_percent']:.1f}%).** Reference: "
         f"~{target['reference_success_percent']:.1f}% (delta {delta:+.1f} points).",
         "",
@@ -381,13 +364,12 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             else None
         )
         reference_cell = f"{reference_task:.1f}%" if reference_task is not None else "n/a"
-        delta_cell = (
-            f"{task['success_percent'] - reference_task:+.1f}" if reference_task is not None else "n/a"
-        )
+        delta_cell = f"{task['success_percent'] - reference_task:+.1f}" if reference_task is not None else "n/a"
         rows.append(
             f"| {task['task_id']}: {task['language']} | {task['success_percent']:.1f}% "
             f"({task['successes']}/{task['episodes']}) | {reference_cell} | {delta_cell} |"
         )
+
     def flag(key: str, on: str, off: str) -> str:
         value = settings[key]
         return "n/a" if value == "n/a" else (on if value else off)
@@ -417,12 +399,16 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             f"- Checkpoint: `{revisions['checkpoint']}` (weights SHA-256 `{revisions['model_sha256']}`).",
             *([semantic_report_line(metrics["semantic_control"])] if metrics.get("semantic_control") else []),
             *(
-                [f"- Policy kind: `{metrics['policy_kind']}`; semantic control active: {metrics['semantic_control_active']}; "
-                 f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."]
-                if metrics.get("policy_kind") else []
+                [
+                    f"- Policy kind: `{metrics['policy_kind']}`; "
+                    f"semantic control active: {metrics['semantic_control_active']}; "
+                    f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; "
+                    f"protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."
+                ]
+                if metrics.get("policy_kind")
+                else []
             ),
-            f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; "
-            f"MuJoCo `{packages['mujoco']}`.",
+            f"- LeRobot: `{revisions['lerobot']}`; LIBERO `{packages['hf-libero']}`; MuJoCo `{packages['mujoco']}`.",
             f"- PyTorch `{packages['torch']}`; Transformers `{packages['transformers']}`; "
             f"complete dependency resolution in `uv.lock` (SHA-256 `{revisions['uv_lock_sha256']}`).",
             f"- Harness revision: `{revisions['repo'] or 'uncommitted worktree (no Git HEAD)'}`; "
@@ -454,7 +440,7 @@ def report_block(config: dict[str, Any], semantic_info: dict[str, Any] | None) -
         preset = semantic_info["control"].get("preset") or semantic_info["control"]["semantic_layers"]
         step = semantic_info.get("checkpoint_metadata", {}).get("step")
         suffix = f"preset {preset}" + (f" @ step {step}" if step is not None else "")
-        block["title"] = f"{block.get('title', 'SmolVLA evaluation')} — {suffix}"
+        block["title"] = f"{block.get('title', 'SmolVLA evaluation')} -- {suffix}"
     return block
 
 
@@ -479,7 +465,7 @@ def rerender(args: argparse.Namespace) -> int:
     metrics = json.loads(args.rerender.resolve().read_text())
     comparable = is_baseline_protocol(config, metrics["eval_settings"])
     metrics["target"] = config["target"]
-    metrics["report"] = config.get("report", {})
+    metrics["report"] = report_block(config, metrics.get("semantic_control"))
     metrics["diagnostics"] = build_diagnostics(config, metrics["result"], comparable)
     metrics["status"] = metrics["diagnostics"].pop("status")
     report_path = args.report.resolve()
@@ -508,8 +494,8 @@ def main() -> int:
     if episodes < 1 or batch_size < 1 or batch_size > episodes:
         raise ValueError("Require episodes >= batch_size >= 1")
 
-    # Imports happen after renderer/thread environment variables are fixed.
-    import torch
+    # imports happen after renderer/thread environment variables are fixed.
+    import torch  # noqa: I001 - keep the pinned import order (libero before lerobot)
     from libero.libero import benchmark
     from lerobot.configs.policies import PreTrainedConfig
     from lerobot.envs import make_env, make_env_pre_post_processors
@@ -524,9 +510,7 @@ def main() -> int:
         import semantic_control as sc
 
         policy_path = args.checkpoint.resolve()
-        requested = (
-            sc.SemanticControlConfig.from_preset(args.semantic_control) if args.semantic_control else None
-        )
+        requested = sc.SemanticControlConfig.from_preset(args.semantic_control) if args.semantic_control else None
         policy, control, semantic_info = sc.load_policy_with_control(
             policy_path,
             requested,
@@ -588,7 +572,9 @@ def main() -> int:
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"Loading {policy_path}" if args.checkpoint is not None else f"Loading {model_cfg['repository']}@{model_cfg['revision']}",
+        f"Loading {policy_path}"
+        if args.checkpoint is not None
+        else f"Loading {model_cfg['repository']}@{model_cfg['revision']}",
         flush=True,
     )
     print(
@@ -607,8 +593,8 @@ def main() -> int:
     policy.eval()
     from lerobot.policies.smolvla.smolvlm_with_expert import SmolVLMWithExpertModel
 
-    semantic_control_active = (
-        type(policy.model.vlm_with_expert) is not SmolVLMWithExpertModel or hasattr(policy, "semantic_control")
+    semantic_control_active = type(policy.model.vlm_with_expert) is not SmolVLMWithExpertModel or hasattr(
+        policy, "semantic_control"
     )
     policy_kind = "semantic_control_checkpoint" if args.checkpoint is not None else "stock_released_smolvla"
     if args.checkpoint is None and semantic_control_active:
@@ -623,9 +609,7 @@ def main() -> int:
             "tokenizer_processor": {"tokenizer_name": str(backbone_path)},
         },
     )
-    env_preprocessor, env_postprocessor = make_env_pre_post_processors(
-        env_cfg=env_config, policy_cfg=policy_cfg
-    )
+    env_preprocessor, env_postprocessor = make_env_pre_post_processors(env_cfg=env_config, policy_cfg=policy_cfg)
 
     noise_protocol = None
     if args.deterministic_noise:
@@ -773,20 +757,21 @@ def main() -> int:
         "fingerprints": {
             "model_sha256": sha256_file(model_file),
             "config_sha256": sha256_file(policy_path / "config.json"),
-            "protocol_sha256": None,  # filled below from eval_settings
+            "protocol_sha256": None,  # filled below from `eval_settings`
         },
         "revisions": {
             "checkpoint": (
-                f"local:{policy_path}" if args.checkpoint is not None
+                f"local:{policy_path}"
+                if args.checkpoint is not None
                 else f"{model_cfg['repository']}@{model_cfg['revision']}"
             ),
             "backbone": (
-                str(backbone_path) if args.checkpoint is not None
+                str(backbone_path)
+                if args.checkpoint is not None
                 else f"{model_cfg['backbone_repository']}@{model_cfg['backbone_revision']}"
             ),
             "libero_assets": (
-                f"{config['sources']['libero_assets_repository']}@"
-                f"{config['sources']['libero_assets_revision']}"
+                f"{config['sources']['libero_assets_repository']}@{config['sources']['libero_assets_revision']}"
             ),
             "lerobot": f"{config['sources']['lerobot_repository']}@{config['sources']['lerobot_revision']}",
             "reference_evaluation": (

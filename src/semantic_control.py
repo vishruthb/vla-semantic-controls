@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Minimal semantic-control interface for SmolVLA.
+"""minimal semantic-control interface for smolvla.
 
-Two knobs, one code path (see ``tmp/arch.md`` section 7 for the interface analysis):
+two knobs, one code path (see ``docs/architecture.md`` sections 7 and 9):
 
-* ``semantic_layers``: which transformer layers let the action expert read the VLM's key/value
-  projections. ``"all"`` is the native SmolVLA wiring (joint self-attention layers *and*
-  cross-attention layers). ``"cross_only"`` hides the VLM prefix from the expert in the joint
-  self-attention layers, so VLM features reach the expert only through the cross-attention layers'
-  dedicated ``k_proj``/``v_proj`` adapters. The VLM stream itself is never changed.
-* ``update_vlm``: whether the action loss updates VLM parameters (text layers, token embeddings,
-  connector). The vision encoder is frozen in every configuration; ``state_proj`` is trainable in
+* ``semantic_layers``: which transformer layers let the action expert read the vlm's key/value
+  projections. ``"all"`` is the native smolvla wiring (joint self-attention layers *and*
+  cross-attention layers). ``"cross_only"`` hides the vlm prefix from the expert in the joint
+  self-attention layers, so vlm features reach the expert only through the cross-attention layers'
+  dedicated ``k_proj``/``v_proj`` adapters. the vlm stream itself is never changed.
+* ``update_vlm``: whether the action loss updates vlm parameters (text layers, token embeddings,
+  connector). the vision encoder is frozen in every configuration; ``state_proj`` is trainable in
   every configuration.
 
-Presets:  A = all/frozen   B = all/trainable   C = cross_only/frozen   D = cross_only/trainable
+presets:  A = all/frozen   B = all/trainable   C = cross_only/frozen   D = cross_only/trainable
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ SNAPSHOT_PATTERNS = ["*.json", "*.txt", "*.model", "*.safetensors"]
 
 
 # --------------------------------------------------------------------------------------------
-# Configuration
+# configuration
 # --------------------------------------------------------------------------------------------
 
 
@@ -51,9 +51,7 @@ class SemanticControlConfig:
 
     def __post_init__(self) -> None:
         if self.semantic_layers not in SEMANTIC_LAYER_CHOICES:
-            raise ValueError(
-                f"semantic_layers must be one of {SEMANTIC_LAYER_CHOICES}, got {self.semantic_layers!r}"
-            )
+            raise ValueError(f"semantic_layers must be one of {SEMANTIC_LAYER_CHOICES}, got {self.semantic_layers!r}")
         if not isinstance(self.update_vlm, bool):
             raise TypeError(f"update_vlm must be a bool, got {type(self.update_vlm).__name__}")
 
@@ -103,7 +101,7 @@ CONTROL_KEYS = ("semantic_layers", "update_vlm", "preset")
 def save_semantic_control(
     config: SemanticControlConfig, directory: Path, metadata: dict[str, Any] | None = None
 ) -> Path:
-    """Write ``semantic_control.json`` next to a checkpoint's ``config.json``/``model.safetensors``."""
+    """write ``semantic_control.json`` next to a checkpoint's ``config.json``/``model.safetensors``."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / SEMANTIC_CONTROL_FILE
@@ -113,7 +111,7 @@ def save_semantic_control(
 
 
 def parse_semantic_control(data: dict[str, Any]) -> tuple[SemanticControlConfig, dict[str, Any]]:
-    """Split a control file into the knobs and the provenance metadata stored alongside them."""
+    """split a control file into the knobs and the provenance metadata stored alongside them."""
     knobs = {k: data[k] for k in CONTROL_KEYS if k in data}
     metadata = {k: v for k, v in data.items() if k not in CONTROL_KEYS}
     return SemanticControlConfig.from_dict(knobs), metadata
@@ -124,14 +122,14 @@ def load_semantic_control(directory: Path) -> SemanticControlConfig:
 
 
 # --------------------------------------------------------------------------------------------
-# Routing
+# routing
 # --------------------------------------------------------------------------------------------
 
 
 def is_cross_attention_layer(layer_idx: int, attention_mode: str, self_attn_every_n_layers: int) -> bool:
-    """Mirror of the layer dispatch in ``SmolVLMWithExpertModel.forward``.
+    """mirror of the layer dispatch in ``SmolVLMWithExpertModel.forward``.
 
-    A layer is a cross-attention layer when the model runs in a ``cross`` attention mode and the
+    a layer is a cross-attention layer when the model runs in a ``cross`` attention mode and the
     layer index is not one of the interleaved joint self-attention layers.
     """
     if "cross" not in attention_mode:
@@ -148,8 +146,8 @@ def _import_upstream():
 
 
 class SemanticSmolVLMWithExpertModel(_import_upstream()):
-    """``SmolVLMWithExpertModel`` whose joint self-attention layers can hide the VLM prefix from the
-    action expert. Module structure and state-dict keys are identical to upstream."""
+    """``SmolVLMWithExpertModel`` whose joint self-attention layers can hide the vlm prefix from the
+    action expert. module structure and state-dict keys are identical to upstream."""
 
     semantic_layers: str = "all"
 
@@ -176,7 +174,7 @@ class SemanticSmolVLMWithExpertModel(_import_upstream()):
         return is_cross_attention_layer(layer_idx, self.attention_mode, self.self_attn_every_n_layers)
 
     def expert_reads_vlm_kv(self, layer_idx: int) -> bool:
-        """Whether the action expert may attend to the VLM key/values of ``layer_idx``."""
+        """whether the action expert may attend to the vlm key/values of ``layer_idx``."""
         if self.semantic_layers == "all":
             return True
         return self.is_cross_attn_layer(layer_idx)
@@ -217,19 +215,17 @@ class SemanticSmolVLMWithExpertModel(_import_upstream()):
         )
 
     @staticmethod
-    def _hide_prefix_from_suffix(
-        attention_mask, inputs_embeds, layer_idx, use_cache, fill_kv_cache, past_key_values
-    ):
-        """Return a copy of ``attention_mask`` in which suffix (action) queries cannot see prefix keys.
+    def _hide_prefix_from_suffix(attention_mask, inputs_embeds, layer_idx, use_cache, fill_kv_cache, past_key_values):
+        """return a copy of ``attention_mask`` in which suffix (action) queries cannot see prefix keys.
 
-        Prefix rows are left untouched, so the VLM stream is unaffected. Masked logits receive the
+        prefix rows are left untouched, so the vlm stream is unaffected. masked logits receive the
         float32 minimum before the softmax, which yields exactly zero probability and exactly zero
         gradient for the hidden keys/values.
         """
         prefix = inputs_embeds[0] if len(inputs_embeds) > 0 else None
         suffix = inputs_embeds[1] if len(inputs_embeds) > 1 else None
         if suffix is None:
-            return attention_mask  # prefix-only pass (e.g. KV-cache fill): nothing to hide
+            return attention_mask  # prefix-only pass (e.g. kv-cache fill): nothing to hide
         if prefix is not None:
             prefix_len = prefix.shape[1]
         elif use_cache and not fill_kv_cache and past_key_values:
@@ -243,7 +239,7 @@ class SemanticSmolVLMWithExpertModel(_import_upstream()):
 
 
 # --------------------------------------------------------------------------------------------
-# Trainability
+# trainability
 # --------------------------------------------------------------------------------------------
 
 
@@ -253,15 +249,15 @@ def _set_requires_grad(module: nn.Module, value: bool) -> None:
 
 
 def apply_trainability(policy: nn.Module, control: SemanticControlConfig) -> None:
-    """Set ``requires_grad`` for every parameter from scratch (upstream ``set_requires_grad`` can
+    """set ``requires_grad`` for every parameter from scratch (upstream ``set_requires_grad`` can
     only freeze, never unfreeze).
 
     * vision encoder: always frozen
     * ``state_proj``: always trainable
-    * ``update_vlm=False``: the whole VLM (text layers, token embeddings, connector, lm_head) frozen
+    * ``update_vlm=False``: the whole vlm (text layers, token embeddings, connector, ``lm_head``) frozen
     * ``update_vlm=True``: text layers, token embeddings and connector trainable; parameters with no
-      path to the action loss stay frozen (``lm_head``, final text norm, and the last VLM layer's
-      q/o projections, MLP and post-attention norm — plus its k/v projections and input norm when the
+      path to the action loss stay frozen (``lm_head``, final text norm, and the last vlm layer's
+      q/o projections, mlp and post-attention norm, plus its k/v projections and input norm when the
       expert does not read that layer's key/values)
     """
     vwe = policy.model.vlm_with_expert
@@ -288,7 +284,7 @@ def apply_trainability(policy: nn.Module, control: SemanticControlConfig) -> Non
             parameter.requires_grad_(False)
     _set_requires_grad(policy.model.state_proj, True)
 
-    # Keep upstream mode flags coherent so `train()` keeps the frozen VLM in eval mode as upstream does.
+    # keep upstream mode flags coherent so `train()` keeps the frozen vlm in eval mode as upstream does.
     vwe.freeze_vision_encoder = True
     vwe.train_expert_only = not control.update_vlm
     policy.config.freeze_vision_encoder = True
@@ -297,7 +293,7 @@ def apply_trainability(policy: nn.Module, control: SemanticControlConfig) -> Non
 
 
 def install_semantic_control(policy: nn.Module, control: SemanticControlConfig) -> nn.Module:
-    """Apply routing and trainability to an already-constructed ``SmolVLAPolicy`` in place."""
+    """apply routing and trainability to an already-constructed ``SmolVLAPolicy`` in place."""
     SemanticSmolVLMWithExpertModel.install(policy.model.vlm_with_expert, control.semantic_layers)
     apply_trainability(policy, control)
     policy.semantic_control = control
@@ -305,7 +301,7 @@ def install_semantic_control(policy: nn.Module, control: SemanticControlConfig) 
 
 
 # --------------------------------------------------------------------------------------------
-# Reporting
+# reporting
 # --------------------------------------------------------------------------------------------
 
 PARAMETER_GROUPS: tuple[tuple[str, str], ...] = (
@@ -352,7 +348,7 @@ def format_parameter_report(report: dict[str, dict[str, int]]) -> str:
 
 
 # --------------------------------------------------------------------------------------------
-# Checkpoint access and policy construction
+# checkpoint access and policy construction
 # --------------------------------------------------------------------------------------------
 
 
@@ -383,8 +379,8 @@ def cache_checkpoint(config: dict[str, Any]) -> tuple[Path, Path]:
 
 
 def align_vision_connector_dtype(policy: nn.Module) -> bool:
-    """The frozen vision encoder feeds the connector directly; if their dtypes differ (fp32 master
-    weights for the connector, bf16 vision) a forward hook casts the vision output. Returns whether
+    """the frozen vision encoder feeds the connector directly; if their dtypes differ (fp32 master
+    weights for the connector, bf16 vision) a forward hook casts the vision output. returns whether
     a hook was installed."""
     vlm_model = policy.model.vlm_with_expert.get_vlm_model()
     connector_dtype = next(vlm_model.connector.parameters()).dtype
@@ -405,9 +401,10 @@ def align_vision_connector_dtype(policy: nn.Module) -> bool:
 
 
 def restore_saved_dtypes(policy: nn.Module, checkpoint: Path) -> int:
-    """`from_pretrained` copies checkpoint tensors into parameters built in the backbone's dtype, which
-    silently rounds fp32 master weights to bf16. Re-copy every tensor whose saved dtype differs from
-    the constructed parameter, keeping the saved dtype. Returns the number of parameters restored."""
+    """``from_pretrained`` copies checkpoint tensors into parameters built in the backbone's dtype, which
+    silently rounds fp32 master weights to bf16. re-copy every tensor whose saved dtype differs from
+    the constructed parameter, keeping the saved dtype. returns the number of parameter elements
+    (``numel``) restored."""
     from safetensors import safe_open
 
     path = Path(checkpoint) / "model.safetensors"
@@ -435,7 +432,7 @@ def build_policy(
     policy_config_overrides: dict[str, Any] | None = None,
     keep_saved_dtypes: bool = True,
 ) -> nn.Module:
-    """Load a SmolVLA checkpoint from a local snapshot directory and apply the semantic control."""
+    """load a smolvla checkpoint from a local snapshot directory and apply the semantic control."""
     from lerobot.configs.policies import PreTrainedConfig
     from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
 
@@ -472,12 +469,12 @@ def build_policy_from_config(
 
 
 # --------------------------------------------------------------------------------------------
-# Verification by observation, fingerprints, guarded loading
+# verification by observation, fingerprints, guarded loading
 # --------------------------------------------------------------------------------------------
 
 
 class RoutingError(RuntimeError):
-    """Raised when a policy's effective routing does not match the requested semantic control."""
+    """raised when a policy's effective routing does not match the requested semantic control."""
 
 
 def make_dummy_batch(
@@ -487,7 +484,7 @@ def make_dummy_batch(
     seed: int = 0,
     device: str | torch.device | None = None,
 ) -> dict[str, torch.Tensor]:
-    """Deterministic batch shaped from the policy config (images, state, action, language)."""
+    """deterministic batch shaped from the policy config (images, state, action, language)."""
     from lerobot.utils.constants import ACTION, OBS_LANGUAGE_ATTENTION_MASK, OBS_LANGUAGE_TOKENS, OBS_STATE
 
     config = policy.config
@@ -513,7 +510,7 @@ def make_dummy_batch(
 
 
 class AttentionRecorder:
-    """Record the mask and Q/K/V shapes of every attention call, tagged with the dispatching layer."""
+    """record the mask and q/k/v shapes of every attention call, tagged with the dispatching layer."""
 
     def __init__(self, vlm_with_expert: nn.Module) -> None:
         self.vwe = vlm_with_expert
@@ -567,8 +564,8 @@ class AttentionRecorder:
 
 
 def observed_routing(policy: nn.Module, batch: dict[str, torch.Tensor] | None = None) -> dict[str, Any]:
-    """Run one training-style forward and report, per joint self-attention layer, whether the action
-    rows can see any prefix key. This inspects the masks actually applied, not configuration."""
+    """run one training-style forward and report, per joint self-attention layer, whether the action
+    rows can see any prefix key. this inspects the masks actually applied, not configuration."""
     vwe = policy.model.vlm_with_expert
     batch = batch or make_dummy_batch(policy)
     suffix_len = policy.config.chunk_size
@@ -604,10 +601,10 @@ def observed_routing(policy: nn.Module, batch: dict[str, torch.Tensor] | None = 
 
 
 def verify_routing(policy: nn.Module, control: SemanticControlConfig | None = None) -> dict[str, Any]:
-    """Assert, by observing the applied attention masks, that ``policy`` routes as ``control`` says.
+    """assert, by observing the applied attention masks, that ``policy`` routes as ``control`` says.
 
-    Raises ``RoutingError`` on any mismatch, including a policy on which no semantic control was
-    installed (upstream class) — the case that would otherwise silently evaluate C/D as native.
+    raises ``RoutingError`` on any mismatch, including a policy on which no semantic control was
+    installed (upstream class), the case that would otherwise silently evaluate C/D as native.
     """
     control = control or getattr(policy, "semantic_control", None)
     if control is None:
@@ -635,9 +632,7 @@ def verify_routing(policy: nn.Module, control: SemanticControlConfig | None = No
     expected_cross = [idx for idx in range(vwe.num_vlm_layers) if vwe.is_cross_attn_layer(idx)]
     if observed["cross_layers"] != expected_cross:
         raise RoutingError(f"Cross-attention layers {observed['cross_layers']} != expected {expected_cross}")
-    trainable_vlm = any(
-        p.requires_grad for n, p in policy.named_parameters() if ".vlm_with_expert.vlm." in n
-    )
+    trainable_vlm = any(p.requires_grad for n, p in policy.named_parameters() if ".vlm_with_expert.vlm." in n)
     if trainable_vlm != control.update_vlm:
         raise RoutingError(f"update_vlm={control.update_vlm} but VLM parameters trainable={trainable_vlm}")
     return {
@@ -667,12 +662,12 @@ def _fingerprint(policy: nn.Module, predicate) -> str:
 
 
 def init_fingerprint(policy: nn.Module) -> str:
-    """SHA-256 of the non-VLM parameters (action expert, state/action projections)."""
+    """sha-256 of the non-vlm parameters (action expert, state/action projections)."""
     return _fingerprint(policy, lambda name: ".vlm_with_expert.vlm." not in name)
 
 
 def vlm_fingerprint(policy: nn.Module) -> str:
-    """SHA-256 of the VLM parameters (vision encoder, connector, text model)."""
+    """sha-256 of the vlm parameters (vision encoder, connector, text model)."""
     return _fingerprint(policy, lambda name: ".vlm_with_expert.vlm." in name)
 
 
@@ -684,12 +679,13 @@ def load_policy_with_control(
     verify: bool = True,
     policy_config_overrides: dict[str, Any] | None = None,
 ) -> tuple[nn.Module, SemanticControlConfig, dict[str, Any]]:
-    """Load a checkpoint directory for evaluation without any chance of silently reverting to native
+    """load a checkpoint directory for evaluation without any chance of silently reverting to native
     routing.
 
-    Rules: a ``semantic_control.json`` in the checkpoint is authoritative — if ``control`` is also
-    given it must match. Without the file, ``control`` must be given explicitly (native SmolVLA is
-    preset A). After loading, the routing is verified by observing the applied attention masks.
+    rules: a ``semantic_control.json`` in the checkpoint is authoritative; if ``control`` is also
+    given it must match. without the file, ``control`` must be given explicitly (native smolvla is
+    preset A). after loading (and unless ``verify=False``), the routing is verified by observing the
+    applied attention masks.
     """
     checkpoint = Path(checkpoint)
     control_file = checkpoint / SEMANTIC_CONTROL_FILE
@@ -702,9 +698,7 @@ def load_policy_with_control(
             "pass one explicitly (native SmolVLA routing is preset A)"
         )
     if control is not None and saved is not None and control != saved:
-        raise RoutingError(
-            f"Requested {control.to_dict()} but {control_file} records {saved.to_dict()}"
-        )
+        raise RoutingError(f"Requested {control.to_dict()} but {control_file} records {saved.to_dict()}")
     effective = control or saved
     policy = build_policy(effective, checkpoint, backbone, device, policy_config_overrides)
     info: dict[str, Any] = {
@@ -721,7 +715,7 @@ def load_policy_with_control(
 
 
 # --------------------------------------------------------------------------------------------
-# CLI
+# cli
 # --------------------------------------------------------------------------------------------
 
 

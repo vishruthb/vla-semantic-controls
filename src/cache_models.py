@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cache the exact policy and backbone revisions used by the baseline."""
+"""cache the exact policy and backbone revisions used by the baseline, plus the pinned libero assets."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 
 from huggingface_hub import snapshot_download
-
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = json.loads((ROOT / "configs/baseline.json").read_text())
@@ -34,10 +33,7 @@ def main() -> None:
         revision=sources["libero_assets_revision"],
         local_dir=asset_dir,
     )
-    print(
-        f"assets: {sources['libero_assets_repository']}@"
-        f"{sources['libero_assets_revision']} -> {path}"
-    )
+    print(f"assets: {sources['libero_assets_repository']}@{sources['libero_assets_revision']} -> {path}")
 
 
 if __name__ == "__main__":

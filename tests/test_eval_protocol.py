@@ -1,16 +1,13 @@
-"""Tests for the matched evaluation protocol and paired statistics (CPU, no model)."""
+"""tests for the matched evaluation protocol and paired statistics (cpu, no model)."""
 
 from __future__ import annotations
 
-import sys
 import unittest
-from pathlib import Path
 
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-import eval_protocol as ep  # noqa: E402
+import eval_protocol as ep
 
 
 class NoiseTests(unittest.TestCase):
@@ -53,7 +50,8 @@ class NoiseTests(unittest.TestCase):
         self.assertTrue(info["enabled"])
         env.reset(seed=[1000, 1001])
         obs = {"observation.state": torch.zeros(2, 8)}
-        policy.select_action(obs); policy.select_action(obs)
+        policy.select_action(obs)
+        policy.select_action(obs)
         self.assertEqual(len(calls), 2)
         self.assertTrue(torch.equal(calls[0][0], ep.episode_noise(1000, "suite", 5, [1000], 0, 4, 3)[0]))
         self.assertTrue(torch.equal(calls[1][1], ep.episode_noise(1000, "suite", 5, [1001], 1, 4, 3)[0]))
@@ -77,9 +75,17 @@ class PairedStatsTests(unittest.TestCase):
         self.assertAlmostEqual(s["delta_points"], 30.0)
         self.assertAlmostEqual(s["relative_delta_percent"], 75.0)
         lo, hi = s["paired_bootstrap_ci95_points"]
-        self.assertLess(lo, 30.0); self.assertGreater(hi, 30.0)
+        self.assertLess(lo, 30.0)
+        self.assertGreater(hi, 30.0)
         self.assertAlmostEqual(s["mcnemar_p"], ep.mcnemar_exact(1, 4))
-        metrics = {"result": {"per_task": [{"task_id": 1, "episode_outcomes": [True, False]}, {"task_id": 0, "episode_outcomes": [False]}]}}
+        metrics = {
+            "result": {
+                "per_task": [
+                    {"task_id": 1, "episode_outcomes": [True, False]},
+                    {"task_id": 0, "episode_outcomes": [False]},
+                ]
+            }
+        }
         keys, values = ep.episode_outcomes(metrics)
         self.assertEqual(keys, [(0, 0), (1, 0), (1, 1)])
         self.assertEqual(values.tolist(), [0, 1, 0])

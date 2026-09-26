@@ -1,22 +1,19 @@
-"""CPU tests for the save/restore contract: routing verification by observation, fingerprints,
-the guarded loader, and the training-wrapper hooks (tiny random SmolVLA, no dataset)."""
+"""cpu tests for the save/restore contract: routing verification by observation, fingerprints,
+the guarded loader, and the training-wrapper hooks (tiny random smolvla, no dataset)."""
 
 from __future__ import annotations
 
 import copy
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 import torch
 
+import train_semantic
 from tests import helpers
 from tests.helpers import sc
-
-sys.path.insert(0, str(helpers.SRC))
-import train_semantic  # noqa: E402
 
 
 class RecipeTests(unittest.TestCase):
@@ -34,9 +31,11 @@ class RecipeTests(unittest.TestCase):
         cls._tmp.cleanup()
 
     def policy_for(self, preset: str):
-        return sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset(preset))
+        return sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset(preset)
+        )
 
-    # -- verification by observation -------------------------------------------------------------
+    # -- verification by observation ---------------------------------------------------------------
 
     def test_verify_routing_accepts_every_preset(self):
         for preset in sc.PRESETS:
@@ -66,7 +65,7 @@ class RecipeTests(unittest.TestCase):
         with self.assertRaises(sc.RoutingError):
             sc.verify_routing(frozen_wrong)
 
-    # -- fingerprints ----------------------------------------------------------------------------
+    # -- fingerprints ------------------------------------------------------------------------------
 
     def test_fingerprints_identify_identical_initialization(self):
         same = helpers.make_tiny_policy(self.tiny_dir, seed=0)
@@ -77,7 +76,7 @@ class RecipeTests(unittest.TestCase):
         self.assertEqual(len(set(fingerprints.values())), 1)  # routing/trainability never touch weights
         self.assertEqual(sc.vlm_fingerprint(self.base_policy), sc.vlm_fingerprint(self.policy_for("D")))
 
-    # -- guarded loading -------------------------------------------------------------------------
+    # -- guarded loading ---------------------------------------------------------------------------
 
     def _save(self, policy, directory: Path):
         policy.save_pretrained(directory)
@@ -111,7 +110,7 @@ class RecipeTests(unittest.TestCase):
             same = sc.load_policy_with_control(directory, sc.SemanticControlConfig.from_preset("C"), device="cpu")
             self.assertEqual(same[1].preset, "C")
 
-    # -- training wrapper ------------------------------------------------------------------------
+    # -- training wrapper --------------------------------------------------------------------------
 
     def test_parse_semantic_args(self):
         control, args, rest = train_semantic.parse_semantic_args(
@@ -186,7 +185,7 @@ if __name__ == "__main__":
 
 
 class PilotHookTests(unittest.TestCase):
-    """Two-LR parameter groups, save_at/stop_at control, and fp32-dtype round trips (tiny model)."""
+    """two-lr parameter groups, ``save_at``/``stop_at`` control, and fp32-dtype round trips (tiny model)."""
 
     @classmethod
     def setUpClass(cls):
@@ -202,7 +201,9 @@ class PilotHookTests(unittest.TestCase):
         cls._tmp.cleanup()
 
     def test_parameter_groups(self):
-        policy_b = sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("B"))
+        policy_b = sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("B")
+        )
         groups = train_semantic.parameter_groups(policy_b, vlm_lr=1e-5)
         self.assertEqual([g["name"] for g in groups], ["expert", "vlm"])
         self.assertEqual(groups[1]["lr"], 1e-5)
@@ -210,19 +211,27 @@ class PilotHookTests(unittest.TestCase):
         trainable = sum(p.numel() for p in policy_b.parameters() if p.requires_grad)
         self.assertEqual(sum(p.numel() for g in groups for p in g["params"]), trainable)
         self.assertTrue(all(p.requires_grad for g in groups for p in g["params"]))
-        policy_a = sc.install_semantic_control(copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("A"))
+        policy_a = sc.install_semantic_control(
+            copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset("A")
+        )
         self.assertEqual([g["name"] for g in train_semantic.parameter_groups(policy_a, 1e-5)], ["expert"])
         opt = torch.optim.AdamW(groups, lr=1e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=1e-10)
         self.assertEqual([g["lr"] for g in opt.param_groups], [1e-4, 1e-5])
 
     def test_parse_pilot_args(self):
         control, args, rest = train_semantic.parse_semantic_args(
-            ["--semantic.preset=B", "--semantic.vlm_lr=1e-5", "--semantic.stop_at=5000", "--semantic.save_at=2000,10000", "--steps=30000"]
+            [
+                "--semantic.preset=B",
+                "--semantic.vlm_lr=1e-5",
+                "--semantic.stop_at=5000",
+                "--semantic.save_at=2000,10000",
+                "--steps=30000",
+            ]
         )
         self.assertEqual(control.preset, "B")
         self.assertEqual(args.vlm_lr, 1e-5)
         self.assertEqual(args.stop_at, 5000)
-        self.assertEqual(args.save_at, [2000, 5000, 10000])  # stop_at is always saved
+        self.assertEqual(args.save_at, [2000, 5000, 10000])  # `stop_at` is always saved
         self.assertEqual(rest, ["--steps=30000"])
 
     def test_fp32_masters_survive_save_and_reload(self):
@@ -231,7 +240,7 @@ class PilotHookTests(unittest.TestCase):
         with torch.no_grad():
             for p in policy.parameters():
                 if p.requires_grad:
-                    p.add_(1e-5)  # a perturbation below bf16 resolution for O(1) weights
+                    p.add_(1e-5)  # a perturbation below bf16 resolution for order-one weights
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp) / "pretrained_model"
             policy.save_pretrained(directory)
@@ -248,12 +257,24 @@ class PilotHookTests(unittest.TestCase):
         import importlib
 
         train_module = importlib.import_module("lerobot.scripts.lerobot_train")
-        saved = {n: getattr(train_module, n) for n in ("make_policy", "save_checkpoint", "update_last_checkpoint", "update_policy", "make_optimizer_and_scheduler")}
+        saved = {
+            n: getattr(train_module, n)
+            for n in (
+                "make_policy",
+                "save_checkpoint",
+                "update_last_checkpoint",
+                "update_policy",
+                "make_optimizer_and_scheduler",
+            )
+        }
         base = self.base_policy
         calls, links = [], []
         try:
             train_module.make_policy = lambda cfg, ds_meta=None, env_cfg=None, rename_map=None: copy.deepcopy(base)
-            train_module.save_checkpoint = lambda checkpoint_dir, step, cfg, policy, optimizer, scheduler=None, **kw: (calls.append(step), policy.save_pretrained(Path(checkpoint_dir) / "pretrained_model"))
+            train_module.save_checkpoint = lambda checkpoint_dir, step, cfg, policy, optimizer, scheduler=None, **kw: (
+                calls.append(step),
+                policy.save_pretrained(Path(checkpoint_dir) / "pretrained_model"),
+            )
             train_module.update_last_checkpoint = lambda checkpoint_dir: links.append(checkpoint_dir)
             control = sc.SemanticControlConfig.from_preset("C")
             module, originals = train_semantic.install_hooks(control, trainable_fp32=False, stop_at=2, save_at=[2])
@@ -264,7 +285,7 @@ class PilotHookTests(unittest.TestCase):
                 train_semantic.STATE["step"] = 1
                 module.save_checkpoint(Path(tmp) / "000001", 1, cfg, policy, optimizer, None)
                 module.update_last_checkpoint(Path(tmp) / "000001")
-                self.assertEqual(calls, [])  # step 1 not in save_at -> skipped, link not updated
+                self.assertEqual(calls, [])  # step 1 not in `save_at` -> skipped, link not updated
                 self.assertEqual(links, [])
                 (Path(tmp) / "000001" / "training_state").mkdir(parents=True)
                 (Path(tmp) / "000001" / "training_state" / "optimizer_state.safetensors").write_bytes(b"x")

@@ -1,13 +1,13 @@
-# SmolVLA (LeRobot @ `8515d45`) — VLM → action-expert interface and gradient-flow map
+# SmolVLA architecture: VLM to action-expert interface
 
-Scope: the *installed* implementation this harness runs, read from
+Scope: the *installed* implementation this harness runs (LeRobot @ `8515d45`), read from
 `.venv/lib/python3.12/site-packages/lerobot/policies/smolvla/` (abbreviated below as
 `MS` = `modeling_smolvla.py`, `SWE` = `smolvlm_with_expert.py`, `CFG` = `configuration_smolvla.py`),
 instantiated with the pinned checkpoint `HuggingFaceVLA/smolvla_libero@6721902` on backbone
 `HuggingFaceTB/SmolVLM2-500M-Instruct@7b375e1`. Dimensions and parameter counts were read from the
 checkpoint tensors and from a CPU instantiation; gradient reach was measured with one dummy
-training step (script: scratchpad `inspect_model.py`). No model code was modified and no
-experiment was run.
+training step on CPU (a one-off inspection script, not part of this repository). This analysis
+modifies no model code and runs no experiment; §9 describes the interface that was built on it.
 
 ---
 
@@ -16,12 +16,12 @@ experiment was run.
 | Module (state-dict prefix `model.`) | Shape / config | Params | Runtime dtype | Trainable in checkpoint regime |
 | --- | --- | ---: | --- | --- |
 | `vlm_with_expert.vlm.model.vision_model` (SigLIP-style) | 512×512 input, patch 16 → 1024 patches, hidden 768 | 86.43 M | bf16 | no (`freeze_vision_encoder=True`, kept in `eval()`) |
-| `…vlm.model.connector` (pixel-shuffle ×4 + `Linear(12288→960)`) | 1024 patches → **64 tokens** / image | 11.80 M | bf16 | no — but **only** because `train_expert_only=True`; `freeze_vision_encoder` does *not* cover it (verified: trains under `train_expert_only=False`) |
+| `…vlm.model.connector` (pixel-shuffle ×4 + `Linear(12288→960)`) | 1024 patches → **64 tokens** / image | 11.80 M | bf16 | no, but **only** because `train_expert_only=True`; `freeze_vision_encoder` does *not* cover it (verified: trains under `train_expert_only=False`) |
 | `…vlm.model.text_model.embed_tokens` | 49280 × 960 | 47.31 M | bf16 | no |
 | `…vlm.model.text_model.layers[0..31]` (Llama block) | hidden 960, 15 heads × 64, **5 KV heads** (GQA ×3), MLP 2560, RoPE θ=1e5 | 314.63 M | bf16 | no |
 | `…vlm.model.text_model.norm`, `…vlm.lm_head` | RMSNorm 960; 49280×960 | 47.31 M | bf16 | no; **never used by the policy** (dead weight, 47 M) |
 | `…lm_expert.layers[0..31]` (Llama block, `AutoModel.from_config`) | hidden **480**, MLP **1280**, `q_proj 480→960`, `o_proj 960→480`, 15 heads × 64, 5 KV heads | 93.42 M | bf16 | **yes** |
-| `…lm_expert.layers[odd].self_attn.{k,v}_proj` (replaced, SWE:120-134) | `Linear(320→320)` — input is the **VLM's** KV width | 3.28 M | **fp32** | **yes** |
+| `…lm_expert.layers[odd].self_attn.{k,v}_proj` (replaced, SWE:120-134) | `Linear(320→320)`; input is the **VLM's** KV width | 3.28 M | **fp32** | **yes** |
 | `…lm_expert.layers[even].self_attn.{k,v}_proj` (original) | `Linear(480→320)` | (in 93.42) | bf16 | yes |
 | `…lm_expert.norm` | RMSNorm 480 | 480 | bf16 | yes |
 | `state_proj` | `Linear(32→960)` | 0.03 M | fp32 | yes (`train_state_proj=True`) |
@@ -67,8 +67,8 @@ cache exact.
 
 Position ids: global `cumsum(pad)−1` over `[prefix ‖ suffix]` for joint (even) layers; in cross (odd)
 layers the expert's positions are re-based to start at 0 (SWE:377-379) while the VLM keys it reads keep
-their prefix positions. This asymmetry is baked into the trained weights — any interface transform
-must be applied *after* RoPE to leave it intact.
+their prefix positions. This asymmetry is baked into the trained weights, so any interface
+transform must be applied *after* RoPE to leave it intact.
 
 ## 3. The interface: one channel, two layer types
 
@@ -82,7 +82,7 @@ projections:
 Dispatch (SWE:437-467): layer `l` is a **joint self-attention layer** if `l % 2 == 0` (or whenever
 `fill_kv_cache=True`), otherwise a **cross-attention layer**.
 
-### 3a. Even layers `l ∈ {0,2,…,30}` — `forward_attn_layer` (SWE:209-284)
+### 3a. Even layers `l ∈ {0,2,…,30}`: `forward_attn_layer` (SWE:209-284)
 
 ```
                  VLM stream (960)                          expert stream (480)
@@ -102,7 +102,7 @@ the expert's attention output.
 Inference (`past_key_values` set, `fill_kv_cache=False`): `inputs_embeds=[None, suffix]`, so
 `K=[K_p^cache ; K_s]`, `V=[V_p^cache ; V_s]` (SWE:276-277); the cached `K_p` is **post-RoPE**.
 
-### 3b. Odd layers `l ∈ {1,3,…,31}` — `forward_cross_attn_layer` (SWE:286-399)
+### 3b. Odd layers `l ∈ {1,3,…,31}`: `forward_cross_attn_layer` (SWE:286-399)
 
 ```
       prefix branch (training only; at inference read from cache, SWE:349-350):
@@ -120,7 +120,7 @@ for the next even layer.
 
 ### 3c. Head-level summary of the forward coupling F
 
-    F = { (K_vlm^l, V_vlm^l) : l = 0..31 }   —  32 layers × [B, P, 5, 64] × 2 tensors
+    F = { (K_vlm^l, V_vlm^l) : l = 0..31 }   (32 layers × [B, P, 5, 64] × 2 tensors)
 
 That set is *complete*: masking it to zero would disconnect the expert from images, language and
 state entirely (the expert has no other input besides noisy actions and time).
@@ -142,7 +142,8 @@ state entirely (the expert has no other input besides noisy actions and time).
 `t ~ 0.001 + 0.999·Beta(1.5,1)`, `x_t = t·ε + (1−t)·a`, `u_t = ε − a`, one **joint** pass with
 `inputs_embeds=[prefix, suffix]`, `use_cache=False` (MS:797), `v_t = action_out_proj(norm(h_exp^{32}))`,
 `loss = MSE(u_t, v_t)` over the 50×7 valid entries (padding-masked). The VLM prefix stream is recomputed
-every step **inside the autograd graph** — there is no `torch.no_grad()` around it even though its weights are frozen.
+every step **inside the autograd graph**: there is no `torch.no_grad()` around it even though its
+weights are frozen.
 
 Backward gradient of the flow-matching loss:
 
@@ -163,7 +164,7 @@ Measured on one CPU step (dummy LIBERO-shaped batch, B=2), `‖grad‖` per grou
 | vision_model | frozen, 0 | frozen, 0 |
 | connector | frozen, 0 | **4.06** (11.8 M trainable) |
 | embed_tokens | frozen, 0 | 1.79 |
-| text layers | frozen, 0 | 6.26 — grads on 305.4 M of 314.6 M (layer 31's q/o/MLP receive none: nothing consumes its output) |
+| text layers | frozen, 0 | 6.26; grads on 305.4 M of 314.6 M (layer 31's q/o/MLP receive none: nothing consumes its output) |
 | lm_head / text norm | 0 (unused) | 0 (unused) |
 | expert layers (excl. cross k/v) | 5.65 | 6.65 |
 | expert cross `k/v_proj` (odd layers) | 2.42 | 2.94 |
@@ -182,7 +183,7 @@ today at λ = 1 regardless of `train_expert_only`; the flag only decides whether
 | --- | --- | --- |
 | `freeze_vision_encoder` (SWE:151-154) | `vision_model` frozen + `eval()` | leaves `connector` trainable |
 | `train_expert_only` (SWE:155-158) | whole `vlm` frozen + `eval()` (kept in eval by `train()` override, SWE:182-189) | parameter-level only; activation gradient still flows (§5) |
-| `train_state_proj` (MS:617-619) | `state_proj` requires_grad | — |
+| `train_state_proj` (MS:617-619) | `state_proj` requires_grad | none |
 | "freeze last VLM layer(s) + final norm" branch (SWE:159-176) | intended for DDP unused-param safety | **dead code under transformers 5.5.4**: patterns `text_model.model.layers.N.` / `text_model.model.norm.weight` never match the real names `model.text_model.layers.N.` (verified: all 32 layers trainable in mode B); only `lm_head` still matches |
 | `set_requires_grad()` (both classes) | freeze-only | **cannot unfreeze**; flipping `train_expert_only` after construction and calling it leaves 0 trainable VLM params (verified). Coupling settings must be applied at construction or with an explicit `requires_grad` reset |
 | PEFT defaults (MS:495-503) | LoRA on expert `q/v_proj` + the five projections | chooses *which weights* learn; does not touch the K/V channel |
@@ -198,10 +199,10 @@ Because §3c shows the K/V channel is the unique interface, one wrapper applied 
 
 ```python
 def couple(k, v, layer_idx, groups=None):
-    # F — forward semantic feature coupling (any of: identity, per-layer scalar α_l, per-head gate,
+    # F: forward semantic feature coupling (any of: identity, per-layer scalar α_l, per-head gate,
     #     per-prefix-token-group gate g[groups], feature dropout, mixing with a learned/null KV …)
     k, v = forward_transform(k, v, layer_idx, groups)
-    # B — backward action-loss gradient coupling: forward identity, backward × λ_l
+    # B: backward action-loss gradient coupling (forward identity, backward × λ_l)
     #     λ=1 → unchanged, λ=0 → exact stop-gradient (== .detach(), and skips the VLM backward)
     k = k.detach() + lam[layer_idx] * (k - k.detach())
     v = v.detach() + lam[layer_idx] * (v - v.detach())
@@ -219,7 +220,7 @@ term never changes forward values. Both can be fixed hyperparameters or learnabl
 | M1 | `forward_cross_attn_layer`, just before SWE:363 (`_key_states = key_states…`) | `key_states, value_states = couple(key_states, value_states, layer_idx)` | odd layers already separate "VLM K/V as read by the expert" (fresh at 320-326 in training, cached at 349-350 at inference). The prefix branch (328-331) keeps using the raw tensors, so the VLM stream is untouched. One insertion covers both training and inference. |
 | M2 | `forward_attn_layer` training path (SWE:245-247) | split the single joint attention into (i) prefix rows over raw `[K_p;V_p]` and (ii) suffix rows over `[couple(RoPE(K_p),V_p) ; K_s,V_s]` | today one attention call serves both streams with **shared** K/V; scaling K_p in place would also alter the VLM's own self-attention and, for B, also scale the VLM-internal gradient edge. Prefix rows are masked from suffix keys, so the split is mathematically identical at `couple = id` and costs no extra FLOPs. |
 | M3 | `forward_attn_layer` inference path (SWE:276-277) | apply `couple` to the cached `K_p, V_p` before the `cat` with `K_s, V_s` | cache stays raw VLM K/V; consumption-point semantics identical to M1/M2. B is irrelevant here (no_grad), only F. |
-| M4 | (optional) `MS:637-729 embed_prefix` → return a `prefix_groups` int tensor (`0=image,1=image2,2=language,3=state`) and plumb it through `VLAFlowMatching.forward/sample_actions/denoise_step` (MS:797, 836, 904) into `SmolVLMWithExpertModel.forward` | needed only for **token-group-resolved** F/B (e.g. attenuate language K/V but keep vision). Prefix layout is deterministic (§2) so the group ids can be built from `img` token counts and `lang_masks`. | 
+| M4 | (optional) `MS:637-729 embed_prefix` | return a `prefix_groups` int tensor (`0=image,1=image2,2=language,3=state`) and plumb it through `VLAFlowMatching.forward/sample_actions/denoise_step` (MS:797, 836, 904) into `SmolVLMWithExpertModel.forward` | needed only for **token-group-resolved** F/B (e.g. attenuate language K/V but keep vision). Prefix layout is deterministic (§2) so the group ids can be built from `img` token counts and `lang_masks`. |
 
 Applying F once at cache-fill time (SWE:266-270) instead of at M3 is a valid inference-only
 optimisation when F is static; keep M3 as the semantic definition so training and inference agree.
@@ -231,7 +232,7 @@ transforms do not).
 - **State token**: enters the VLM prefix via `state_proj` (MS:704) and reaches the expert only through
   F. Under λ=0 at all layers, `state_proj` stops learning (its only gradient path is B). Choice to make
   explicitly: accept a frozen `state_proj`, exempt the state column from λ (M4 groups make this a
-  one-liner), or route state into the expert directly (an architecture change — out of scope here).
+  one-liner), or route state into the expert directly (an architecture change, out of scope here).
 - **Connector / embed_tokens / vision**: parameter-level; control them with explicit `requires_grad`
   per module rather than the two flags (connector is not covered by `freeze_vision_encoder`).
 - **VLM-internal gradient** (from `K_vlm^{l+1}` back through VLM layer `l`): downstream of the B edges,
@@ -243,12 +244,14 @@ transforms do not).
 
 ### 7.3 Implementation strategy without touching the pinned lock
 
-- Put the override in this repo (e.g. `src/coupling.py`): subclass `SmolVLMWithExpertModel` (or
-  assign the two overridden methods on the instance after `make_policy`). State-dict keys are
-  unchanged, so the checkpoint loads as-is; any new α/λ parameters appear as *missing keys*, which
-  `PreTrainedPolicy.from_pretrained(strict=False)` (default) tolerates and logs.
+- Put the override in this repo (as `src/semantic_control.py` now does, §9): subclass
+  `SmolVLMWithExpertModel` (or assign the two overridden methods on the instance after `make_policy`).
+  State-dict keys are unchanged, so the checkpoint loads as-is; any new α/λ parameters appear as
+  *missing keys*, which `PreTrainedPolicy.from_pretrained(strict=False)` (default) tolerates and logs.
 - Configure via a `coupling` block in the JSON config (per-layer `forward` / `backward` schedules,
-  optional per-group masks), recorded into `metrics.json` provenance by `evaluate.py`.
+  optional per-group masks), recorded into `metrics.json` provenance by `evaluate.py`. The implemented
+  two-knob version uses presets in `configs/semantic_control.json` plus a per-checkpoint
+  `semantic_control.json`, which `evaluate.py` records under `metrics["semantic_control"]`.
 - Invariants to test before any run (CPU, seconds): with α≡1, λ≡1, `sample_actions` with fixed noise
   must equal the unpatched output to bf16 tolerance; with λ≡0 and `train_expert_only=True`,
   `state_proj.grad` must be `None`/zero and no VLM activation may require grad (also verifies the
@@ -278,11 +281,13 @@ token-group routing.
 
 | Knob | Values | Mechanism |
 | --- | --- | --- |
-| `semantic_layers` | `"all"` (native) / `"cross_only"` | `SemanticSmolVLMWithExpertModel.forward_attn_layer` (a `__class__` swap on the upstream instance; state-dict keys unchanged). For `cross_only`, in the joint self-attention layers the suffix (action) rows of the attention mask get their prefix columns set to `False` — both in the training joint pass and in the cached-KV inference pass. The float32-minimum fill before the softmax yields *exactly* zero probability and zero gradient on the hidden VLM K/V, so this is equivalent to M2/M3 of §7.1 for a binary on/off choice and needs no attention split. Cross-attention layers and the VLM stream (verified bitwise on the KV cache) are untouched. |
+| `semantic_layers` | `"all"` (native) / `"cross_only"` | `SemanticSmolVLMWithExpertModel.forward_attn_layer` (a `__class__` swap on the upstream instance; state-dict keys unchanged). For `cross_only`, in the joint self-attention layers the suffix (action) rows of the attention mask get their prefix columns set to `False`, both in the training joint pass and in the cached-KV inference pass. The float32-minimum fill before the softmax yields *exactly* zero probability and zero gradient on the hidden VLM K/V, so this is equivalent to M2/M3 of §7.1 for a binary on/off choice and needs no attention split. Cross-attention layers and the VLM stream (verified bitwise on the KV cache) are untouched. |
 | `update_vlm` | `False` / `True` | `apply_trainability` sets `requires_grad` for every parameter from scratch. Vision encoder always frozen; `state_proj` always trainable. `True` trains text layers, token embeddings and connector, but keeps parameters with no path to the action loss frozen (`lm_head`, final text norm, last VLM layer's q/o/MLP/post-attention norm) so that "trainable ⇔ receives gradient" holds exactly. |
 
 Presets: A = all/frozen, B = all/trainable, C = cross_only/frozen, D = cross_only/trainable
 (`configs/semantic_control.json`, pinned to `lerobot/smolvla_base@c83c316` on
 `SmolVLM2-500M-Video-Instruct@7b375e1`: 16 VLM layers, expert width 0.75, 450.0 M parameters).
 Verified on the RTX 5090: A is bitwise identical to upstream (loss, actions, every gradient, every
-attention mask); trainable parameters A/C 99,880,992, B/D 307,086,432.
+attention mask); trainable parameters A/C 99,880,992, B/D 307,086,432. The A-D pilot trains the
+32-layer `smolvla_libero` shape instead (`docs/recipe.md`): there A/C train 97,451,872 and B/D
+461,974,432 of 604,934,176 parameters.

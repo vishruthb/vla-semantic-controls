@@ -1,6 +1,6 @@
-# SmolVLA LIBERO-Spatial Baseline — preset A @ step 30000
+# SmolVLA LIBERO-Spatial Baseline -- preset A @ step 30000
 
-**Status: DIAGNOSE (outside the +/-5.0-point reproduction band) — 141/200 successes (70.5%).** Reference: ~81.5% (delta -11.0 points).
+**Status: DIAGNOSE (outside the +/-5.0-point reproduction band) -- 141/200 successes (70.5%).** Reference: ~81.5% (delta -11.0 points).
 
 | Task | This run | Reference | Delta |
 | --- | ---: | ---: | ---: |

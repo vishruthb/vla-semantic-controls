@@ -1,6 +1,6 @@
 # SmolVLA LIBERO-Spatial Baseline
 
-**Status: PASS (within the +/-5.0-point reproduction band) — 164/200 successes (82.0%).** Reference: ~81.5% (delta +0.5 points).
+**Status: PASS (within the +/-5.0-point reproduction band) -- 164/200 successes (82.0%).** Reference: ~81.5% (delta +0.5 points).
 
 | Task | This run | Reference | Delta |
 | --- | ---: | ---: | ---: |

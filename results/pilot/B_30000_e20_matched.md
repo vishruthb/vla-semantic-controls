@@ -1,6 +1,6 @@
-# SmolVLA LIBERO-Spatial Baseline — preset B @ step 30000
+# SmolVLA LIBERO-Spatial Baseline -- preset B @ step 30000
 
-**Status: PASS (within the +/-5.0-point reproduction band) — 157/200 successes (78.5%).** Reference: ~81.5% (delta -3.0 points).
+**Status: PASS (within the +/-5.0-point reproduction band) -- 157/200 successes (78.5%).** Reference: ~81.5% (delta -3.0 points).
 
 | Task | This run | Reference | Delta |
 | --- | ---: | ---: | ---: |

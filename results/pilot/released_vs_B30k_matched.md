@@ -1,4 +1,4 @@
-# B@30k vs released SmolVLA — matched 200-episode LIBERO-Spatial protocol
+# B@30k vs released SmolVLA -- matched 200-episode LIBERO-Spatial protocol
 
 Protocol fingerprints: reference `796598d68b5592a8`, candidate `796598d68b5592a8` (identical).
 

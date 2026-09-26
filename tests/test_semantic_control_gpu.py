@@ -26,7 +26,7 @@ def _snapshots():
             sc.resolve_snapshot(checkpoint["repository"], checkpoint["revision"]),
             sc.resolve_snapshot(checkpoint["backbone_repository"], checkpoint["backbone_revision"]),
         )
-    except Exception:  # noqa: BLE001 - checkpoint not cached means the gpu tests are skipped
+    except Exception:  # checkpoint not cached means the gpu tests are skipped
         return None
 
 

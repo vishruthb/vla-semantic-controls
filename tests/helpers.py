@@ -32,7 +32,7 @@ def find_backbone_snapshot() -> Path | None:
     for repository, revision in candidates:
         try:
             return sc.resolve_snapshot(repository, revision, local_files_only=True)
-        except Exception:  # noqa: BLE001 - any cache miss means "try the next candidate"
+        except Exception:  # any cache miss means "try the next candidate"
             continue
     return None
 

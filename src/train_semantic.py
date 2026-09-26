@@ -36,7 +36,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import semantic_control as sc  # noqa: E402
+import semantic_control as sc
 
 TRAIN_LOG_FILE = "semantic_train_log.jsonl"
 STATE: dict[str, Any] = {}
@@ -152,7 +152,7 @@ def provenance() -> dict[str, Any]:
         from accelerate.state import AcceleratorState
 
         mixed_precision = AcceleratorState().mixed_precision if AcceleratorState._shared_state else None
-    except Exception:  # noqa: BLE001
+    except Exception:
         mixed_precision = None
     return {
         "lerobot_version": importlib.metadata.version("lerobot"),
@@ -178,7 +178,7 @@ def nvidia_smi_used_mib() -> int | None:
             ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits", "-i", "0"], text=True
         )
         return int(out.strip().splitlines()[0])
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -312,7 +312,7 @@ def install_hooks(
         try:
             meter = getattr(train_metrics, "grad_norm", None)
             total_norm = float(meter.val) if hasattr(meter, "val") else (float(meter) if meter is not None else None)
-        except Exception:  # noqa: BLE001
+        except Exception:
             total_norm = None
         entry = {
             "step": STATE["step"],

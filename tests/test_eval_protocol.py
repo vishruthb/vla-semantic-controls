@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-import eval_protocol as ep  # noqa: E402
+import eval_protocol as ep
 
 
 class NoiseTests(unittest.TestCase):

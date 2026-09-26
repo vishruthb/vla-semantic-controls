@@ -20,8 +20,9 @@ import mujoco
 import torch
 import lerobot
 import libero
+assert torch.cuda.is_available(), "CUDA is not available"
 print(f"torch={torch.__version__} cuda={torch.version.cuda} gpu={torch.cuda.get_device_name(0)}")
 print(f"lerobot={lerobot.__version__} mujoco={mujoco.__version__} libero={libero.__file__}")
-assert torch.cuda.is_available()
-assert torch.cuda.get_device_capability(0) == (12, 0)
+capability = torch.cuda.get_device_capability(0)
+assert capability == (12, 0), f"pinned for compute capability 12.0 (RTX 5090), found {capability}"
 PY

@@ -16,7 +16,7 @@ from tests import helpers
 from tests.helpers import sc
 
 sys.path.insert(0, str(helpers.SRC))
-import train_semantic  # noqa: E402
+import train_semantic
 
 
 class RecipeTests(unittest.TestCase):

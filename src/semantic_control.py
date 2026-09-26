@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """minimal semantic-control interface for smolvla.
 
-two knobs, one code path (see ``docs/architecture.md`` section 7 for the interface analysis):
+two knobs, one code path (see ``docs/architecture.md`` sections 7 and 9):
 
 * ``semantic_layers``: which transformer layers let the action expert read the vlm's key/value
   projections. ``"all"`` is the native smolvla wiring (joint self-attention layers *and*

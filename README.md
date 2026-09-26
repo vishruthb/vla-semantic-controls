@@ -60,7 +60,7 @@ What this shows so far:
    and D-C = +7.0 (p = 0.11). Neither is significant on its own.
 2. **Restricting the expert to the cross-attention layers did not help.** The routing effect was -1.25 points at 20k
    and -5.0 at 30k. Neither estimate, nor the change between them (-3.75 [-11.25, +3.75]), is distinguishable from
-   zero. Cross-only runs do end with higher training loss: C 0.075 vs A 0.057, and D 0.063 vs B 0.050 (mean over
+   zero (the change is computed in [`summary_30k.json`](results/pilot/summary_30k.json)). Cross-only runs do end with higher training loss: C 0.075 vs A 0.057, and D 0.063 vs B 0.050 (mean over
    steps 29k-30k).
 3. **No interaction between the two knobs was detected** (-1.0 points). With 200 episodes, interactions of up to about
    10 points cannot be ruled out.
@@ -87,7 +87,8 @@ the VLM learning rate. Full tables: [`factorial_30k.md`](results/pilot/factorial
 
 **Model.** SmolVLA from LeRobot `8515d45`, in the shape of `smolvla_libero`:
 
-- The pretrained `SmolVLM2-500M-Video-Instruct` backbone with all 32 text layers.
+- The pretrained `SmolVLM2-500M-Video-Instruct` backbone with all 32 text layers (the same Hub repository and
+  revision as `SmolVLM2-500M-Instruct`, the name the baseline config uses).
 - A 32-layer action expert of width 0.5 (hidden size 480).
 - Even layers are joint self-attention over VLM and action tokens. Odd layers are cross-attention into VLM keys/values
   through a learned 320 -> 320 projection.
@@ -114,8 +115,8 @@ shape trained here runs the same code path.
   - the VLM goes from 1e-5 to 2.5e-7.
 
   Weights are held as fp32 master copies, with bf16 autocast.
-- **Compute.** One RTX 5090. A and C take about 0.43 s per step (11.5 GiB peak); B and D take 0.48-0.50 s per step
-  (18.6 GiB). One 30k-step run takes 3.7-4.3 hours of wall-clock time.
+- **Compute.** One RTX 5090. A and C average 0.42-0.43 s per step (11.5 GiB peak); B and D average 0.48-0.49 s per
+  step (18.6 GiB). One 30k-step run takes 3.7-4.3 hours of training-process time, summed over its four stages.
 
 ### Evaluation
 
@@ -135,8 +136,8 @@ fixed. Comparisons use paired bootstrap intervals, exact McNemar tests, and the 
 [zuoxingdong/smolvla-libero-eval](https://github.com/zuoxingdong/smolvla-libero-eval) (`114d19c`). On it, the
 released checkpoint scores 154/200 (77.0%, [70.7, 82.3]) against the published 163/200 (81.5%), within the 5-point
 band we set for reproduction ([`results/REPORT.md`](results/REPORT.md)). On the matched protocol, the same checkpoint
-scores 164/200 (82.0%). The two runs differ only in how the flow-matching noise is drawn and in cuDNN/TF32 settings,
-yet they disagree on 32 of 200 episodes. That swing, from evaluation noise alone, is why all comparisons above are
+scores 164/200 (82.0%). The two runs differ in how the flow-matching noise is drawn, in cuDNN/TF32 settings and in
+whether videos are rendered, yet they disagree on 32 of 200 episodes. That swing, from evaluation noise alone, is why all comparisons above are
 paired.
 
 ## Reproduce
@@ -149,8 +150,9 @@ Requires:
 - uv 0.9.0 and OSMesa.
 
 All Python dependencies, including the LeRobot commit, LIBERO, MuJoCo and PyTorch, are locked in `uv.lock`. The
-trained A-D checkpoints are not included (about 16 GPU-hours to retrain). All statistics can be recomputed from the
-committed `results/pilot/*.json` without a GPU.
+trained A-D checkpoints are not included (about 16 GPU-hours to retrain). Every report and statistic can be
+recomputed from the committed JSON on CPU; [`results/README.md`](results/README.md) has the commands, the file layout
+and the provenance of each result.
 
 ```bash
 sudo apt-get install -y libosmesa6 libglfw3 libgl1
@@ -159,9 +161,10 @@ sudo apt-get install -y libosmesa6 libglfw3 libgl1
 ./scripts/evaluate.sh                                # released checkpoint, reference protocol -> results/REPORT.md
 ```
 
-Semantic-control interface and tests. The interface tests and `report` use `lerobot/smolvla_base`
+Semantic-control interface and tests. The GPU test and `report` use `lerobot/smolvla_base`
 (`configs/semantic_control.json`), so their parameter counts are for the 16-layer shape, not for the 32-layer
-training model in the table above.
+training model in the table above. The CPU unit and recipe tests build a tiny random model but borrow tokenizer files
+from the cached backbone, and skip without it, so run `setup.sh` and `semantic_control.py cache` first.
 
 ```bash
 uv run --frozen python src/semantic_control.py cache                    # smolvla_base + backbone (needed by pilot.py)
@@ -174,7 +177,7 @@ uv run --frozen python -m pytest tests/test_eval_protocol.py            # matche
 ```
 
 A-D pilot. Training resumes from the last checkpoint at each stage, and the learning-rate schedule always spans 30k
-steps.
+steps. The commands for the 5k, 10k and 20k evaluations are in [`docs/recipe.md`](docs/recipe.md) section 0.
 
 ```bash
 for step in 5000 10000 20000 30000; do uv run --frozen python src/pilot.py train --stop-at $step; done

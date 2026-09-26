@@ -1,4 +1,4 @@
-"""Tests for the matched evaluation protocol and paired statistics (CPU, no model)."""
+"""tests for the matched evaluation protocol and paired statistics (cpu, no model)."""
 
 from __future__ import annotations
 

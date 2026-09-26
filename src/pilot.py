@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Staged A/B/C/D pilot driver: train (fresh or resume) to a step, evaluate checkpoints, summarize.
+"""staged A/B/C/D pilot driver: train (fresh or resume) to a step, evaluate checkpoints, compare, summarize.
 
     python src/pilot.py train --presets A B C D --stop-at 5000
-    python src/pilot.py eval  --presets A B C D --step 5000 --episodes 2 --batch 2 [--parallel]
+    python src/pilot.py eval  --presets A B C D --step 5000 --episodes 2 --batch 2 [--parallel] [--deterministic]
+    python src/pilot.py compare --step 5000 --episodes 2 [--deterministic]
     python src/pilot.py summarize --step 5000 --episodes 2
 
-Training uses LeRobot's official loop through ``train_semantic.py`` with a fixed 30k-step LR horizon
+training uses lerobot's official loop through ``train_semantic.py`` with a fixed 30k-step lr horizon
 and stops after saving ``--stop-at``; resuming continues sample-exactly from ``checkpoints/last``.
-Evaluation uses the pinned harness (``evaluate.py --checkpoint``), which restores and verifies the
-semantic routing from the checkpoint before running any episode.
+evaluation uses the pinned harness (``evaluate.py --checkpoint``), which restores and verifies the
+semantic routing from the checkpoint before running any episode. ``compare`` pairs every preset with
+preset A on the same episodes (``--deterministic`` selects the matched-protocol ``*_matched`` results).
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ import semantic_control as sc  # noqa: E402
 TRAIN_ROOT = ROOT / "outputs/train"
 LOG_ROOT = ROOT / "outputs/logs"
 RESULTS_ROOT = ROOT / "results/pilot"
-HORIZON_STEPS = 30000  # LR schedule horizon (== scheduler decay steps, so no auto-scaling)
+HORIZON_STEPS = 30000  # lr schedule horizon (== scheduler decay steps, so no auto-scaling)
 SAVE_AT = "2000,5000,10000,15000,20000,25000,30000"
 BASELINE = json.loads((ROOT / "configs/baseline.json").read_text())
 
@@ -48,7 +50,7 @@ def run_dir(preset: str) -> Path:
 
 
 def checkpoint_dir(preset: str, step: int) -> Path:
-    """LeRobot zero-pads checkpoint directory names; locate by numeric value."""
+    """lerobot zero-pads checkpoint directory names; locate by numeric value."""
     checkpoints = run_dir(preset) / "checkpoints"
     for directory in sorted(checkpoints.glob("[0-9]*")) if checkpoints.exists() else []:
         if directory.name.isdigit() and int(directory.name) == step:
@@ -110,7 +112,7 @@ def train_env() -> dict[str, str]:
 
 
 def prune_training_state(preset: str) -> list[str]:
-    """Drop optimizer/RNG state of every checkpoint except the one `last` points to."""
+    """drop optimizer/rng state of every checkpoint except the one `last` points to."""
     checkpoints = run_dir(preset) / "checkpoints"
     last = (checkpoints / "last").resolve() if (checkpoints / "last").exists() else None
     pruned = []
@@ -192,7 +194,7 @@ def evaluate(
     max_parallel: int = 2,
     deterministic: bool = False,
 ) -> list[dict]:
-    """Each evaluation holds 10 tasks x batch MuJoCo subprocesses alive; cap concurrency to avoid OOM."""
+    """each evaluation holds 10 tasks x `batch` mujoco subprocesses alive; cap concurrency to avoid oom."""
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     env.update(
@@ -207,7 +209,7 @@ def evaluate(
         TOKENIZERS_PARALLELISM="false",
         LIBERO_CONFIG_PATH=str(ROOT / ".cache/libero"),
     )
-    procs, outputs = [], []
+    procs = []
     for preset in presets:
         command, output = eval_command(preset, step, episodes, batch, deterministic)
         log = (LOG_ROOT / f"eval_{result_stem(preset, step, episodes, deterministic)}.log").open("w")
@@ -314,7 +316,7 @@ def summarize(step: int, episodes: int | None, presets: list[str]) -> dict:
 
 
 def compare(step: int, episodes: int, presets: list[str], deterministic: bool, baseline: str = "A") -> dict:
-    """Paired comparison of every preset against the baseline preset on matched episodes."""
+    """paired comparison of every preset against the baseline preset on matched episodes."""
     import eval_protocol as ep
 
     loaded = {}
@@ -348,7 +350,8 @@ def compare(step: int, episodes: int, presets: list[str], deterministic: bool, b
     out = RESULTS_ROOT / f"paired_{step:05d}_e{episodes}{'_matched' if deterministic else ''}.json"
     out.write_text(json.dumps(report, indent=1))
     lines = [
-        f"# Paired comparison vs {baseline} @ step {step} ({episodes} episodes/task, {'matched' if deterministic else 'unmatched'} protocol)",
+        f"# Paired comparison vs {baseline} @ step {step} ({episodes} episodes/task, "
+        f"{'matched' if deterministic else 'unmatched'} protocol)",
         "",
         "| preset | success | Δ vs A (pts) | rel Δ | paired bootstrap 95% CI | wins / losses / ties | McNemar p |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -358,13 +361,14 @@ def compare(step: int, episodes: int, presets: list[str], deterministic: bool, b
             continue
         s = report["success"][preset]
         if preset == baseline:
-            lines.append(f"| {preset} | {s:.1f}% | — | — | — | — | — |")
+            lines.append(f"| {preset} | {s:.1f}% | -- | -- | -- | -- | -- |")
             continue
         p = report["paired"][preset]
         ci = p["paired_bootstrap_ci95_points"]
         rel = f"{p['relative_delta_percent']:+.1f}%" if p["relative_delta_percent"] is not None else "n/a"
         lines.append(
-            f"| {preset} | {s:.1f}% | {p['delta_points']:+.1f} | {rel} | [{ci[0]:+.1f}, {ci[1]:+.1f}] | {p['wins']} / {p['losses']} / {p['ties']} | {p['mcnemar_p']:.3f} |"
+            f"| {preset} | {s:.1f}% | {p['delta_points']:+.1f} | {rel} | [{ci[0]:+.1f}, {ci[1]:+.1f}] | "
+            f"{p['wins']} / {p['losses']} / {p['ties']} | {p['mcnemar_p']:.3f} |"
         )
     lines += ["", "Per-task successes (delta vs A):", ""]
     header = "| task | A | " + " | ".join(f"{p} (Δ)" for p in presets if p in loaded and p != baseline) + " |"

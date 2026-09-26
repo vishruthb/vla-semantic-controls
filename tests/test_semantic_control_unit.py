@@ -1,4 +1,4 @@
-"""CPU unit tests for the semantic-control interface (tiny randomly initialised SmolVLA)."""
+"""cpu unit tests for the semantic-control interface (tiny randomly initialised smolvla)."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ class TinyModelTests(unittest.TestCase):
         policy = copy.deepcopy(self.base_policy)
         return sc.install_semantic_control(policy, sc.SemanticControlConfig.from_preset(preset))
 
-    # -- structure -------------------------------------------------------------------------
+    # -- structure ---------------------------------------------------------------------------------
 
     def test_install_keeps_state_dict_keys(self):
         upstream_keys = list(self.base_policy.state_dict().keys())
@@ -111,7 +111,7 @@ class TinyModelTests(unittest.TestCase):
         self.assertEqual(self.policy_for("C").model.vlm_with_expert.coupled_layers(), [1, 3])
         self.assertEqual(self.policy_for("D").model.vlm_with_expert.coupled_layers(), [1, 3])
 
-    # -- trainability ------------------------------------------------------------------------
+    # -- trainability ------------------------------------------------------------------------------
 
     def test_trainable_sets_match_specification(self):
         for preset in sc.PRESETS:
@@ -163,7 +163,7 @@ class TinyModelTests(unittest.TestCase):
         # routing does not change the trainable set (the last tiny layer is a cross layer in both)
         self.assertEqual(reports["A"]["total"]["trainable"], reports["C"]["total"]["trainable"])
         self.assertEqual(reports["B"]["total"]["trainable"], reports["D"]["total"]["trainable"])
-        # update_vlm adds exactly: connector + embed_tokens + live text-layer parameters
+        # `update_vlm` adds exactly: connector + `embed_tokens` + live text-layer parameters
         policy_b = self.policy_for("B")
         text_layers = policy_b.model.vlm_with_expert.get_vlm_model().text_model.layers
         last = text_layers[-1]
@@ -183,7 +183,7 @@ class TinyModelTests(unittest.TestCase):
         self.assertEqual(reports["A"]["action_in_proj"]["total"], 32 * 32 + 32)
         self.assertEqual(reports["A"]["action_out_proj"]["total"], 32 * 32 + 32)
 
-    # -- routing and numerics ------------------------------------------------------------------
+    # -- routing and numerics ----------------------------------------------------------------------
 
     def _train_forward(self, policy):
         policy.train()
@@ -265,7 +265,7 @@ class TinyModelTests(unittest.TestCase):
         self.assertEqual(len(rec_all.records), len(rec_cross.records))
         suffix_len = policy_all.config.chunk_size
         fill_calls = self.num_layers
-        # KV-cache fill pass: prefix only, identical
+        # kv-cache fill pass: prefix only, identical
         for a, c in zip(rec_all.records[:fill_calls], rec_cross.records[:fill_calls], strict=True):
             self.assertTrue(torch.equal(a["mask"], c["mask"]))
             self.assertEqual(a["q_shape"][1], a["k_shape"][1])  # prefix-only: query and key lengths match

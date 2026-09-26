@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cache the exact policy and backbone revisions used by the baseline."""
+"""cache the exact policy and backbone revisions used by the baseline, plus the pinned libero assets."""
 
 from __future__ import annotations
 

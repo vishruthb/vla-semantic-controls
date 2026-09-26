@@ -1,4 +1,4 @@
-"""Shared fixtures for the semantic-control tests (CPU tiny model and real-model GPU tests)."""
+"""shared fixtures for the semantic-control tests (tiny cpu model and real-model gpu tests)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any
 
 import torch
 
@@ -24,7 +23,7 @@ import semantic_control as sc  # noqa: E402
 
 
 def find_backbone_snapshot() -> Path | None:
-    """Locate a cached SmolVLM2 snapshot to borrow tokenizer/processor files from."""
+    """locate a cached smolvlm2 snapshot to borrow tokenizer/processor files from."""
     candidates = []
     semantic = sc.load_checkpoint_config()["checkpoint"]
     candidates.append((semantic["backbone_repository"], semantic["backbone_revision"]))
@@ -39,7 +38,7 @@ def find_backbone_snapshot() -> Path | None:
 
 
 def build_tiny_vlm_dir(target: Path, backbone_snapshot: Path) -> Path:
-    """Write a tiny SmolVLM config next to the real tokenizer/processor files."""
+    """write a tiny smolvlm config next to the real tokenizer/processor files."""
     target.mkdir(parents=True, exist_ok=True)
     for file in backbone_snapshot.iterdir():
         if file.is_file() and not file.name.endswith(".safetensors") and not file.name.startswith("."):
@@ -70,7 +69,7 @@ def build_tiny_vlm_dir(target: Path, backbone_snapshot: Path) -> Path:
 
 
 def make_tiny_policy(tiny_dir: Path, num_steps: int = 2, seed: int = 0):
-    """A randomly initialised SmolVLA with 4 VLM layers (self, cross, self, cross)."""
+    """build a randomly initialised smolvla with 4 vlm layers (self, cross, self, cross)."""
     from lerobot.configs import FeatureType, PolicyFeature
     from lerobot.policies.smolvla.configuration_smolvla import SmolVLAConfig
     from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
@@ -107,7 +106,7 @@ def make_tiny_policy(tiny_dir: Path, num_steps: int = 2, seed: int = 0):
 def make_batch(
     policy, text: str = "pick up the black bowl and place it on the plate", batch_size: int = 2, seed: int = 0
 ) -> dict[str, torch.Tensor]:
-    """Deterministic CPU batch shaped from the policy config (shared implementation in semantic_control)."""
+    """deterministic cpu batch shaped from the policy config (shared implementation: ``sc.make_dummy_batch``)."""
     return sc.make_dummy_batch(policy, text=text, batch_size=batch_size, seed=seed, device="cpu")
 
 
@@ -126,7 +125,7 @@ AttentionRecorder = sc.AttentionRecorder
 
 
 def prefix_kv_cache(policy, batch: dict[str, torch.Tensor]) -> dict[int, tuple[torch.Tensor, torch.Tensor]]:
-    """Run the VLM-only KV-cache fill pass (what inference does first) and return the cache on CPU."""
+    """run the vlm-only kv-cache fill pass (what inference does first) and return the cache on cpu."""
     from lerobot.policies.smolvla.modeling_smolvla import make_att_2d_masks
     from lerobot.utils.constants import OBS_LANGUAGE_ATTENTION_MASK, OBS_LANGUAGE_TOKENS
 
@@ -161,7 +160,7 @@ def grad_norms(policy) -> dict[str, float | None]:
 
 
 def expected_trainable(name: str, control: sc.SemanticControlConfig, last_idx: int, reads_last: bool) -> bool:
-    """Independent specification of the trainable set, by parameter name."""
+    """independent specification of the trainable set, by parameter name."""
     if ".vlm.model.vision_model." in name:
         return False
     if ".vlm_with_expert.vlm." in name:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the pinned SmolVLA LIBERO-Spatial evaluation and record provenance."""
+"""run the pinned smolvla libero-spatial evaluation and record provenance."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
         "--checkpoint",
         type=Path,
         metavar="PRETRAINED_MODEL_DIR",
-        help="Evaluate a local LeRobot checkpoint (…/checkpoints/<step>/pretrained_model) instead of the "
+        help="Evaluate a local LeRobot checkpoint (.../checkpoints/<step>/pretrained_model) instead of the "
         "pinned Hub snapshot; semantic routing is restored from its semantic_control.json and verified",
     )
     parser.add_argument(
@@ -79,7 +79,7 @@ def configure_process() -> None:
 
 
 def ensure_libero_config() -> None:
-    """Create LIBERO's default asset map without its interactive first-import prompt."""
+    """create libero's default asset map without its interactive first-import prompt."""
     spec = importlib.util.find_spec("libero")
     if spec is None or not spec.submodule_search_locations:
         raise RuntimeError("The pinned hf-libero package is not installed")
@@ -187,7 +187,7 @@ def percentile(values: list[float], q: float) -> float | None:
 
 
 def wilson_interval(successes: int, episodes: int) -> tuple[float, float]:
-    """Return an approximate 95% Wilson interval as percentages."""
+    """return an approximate 95% wilson interval as percentages."""
     z = 1.959963984540054
     proportion = successes / episodes
     denominator = 1 + z**2 / episodes
@@ -229,7 +229,7 @@ def is_baseline_protocol(config: dict[str, Any], settings: dict[str, Any]) -> bo
 
 
 def describe_per_task_spread(per_task: list[dict[str, Any]], deltas: list[float], threshold: float) -> str:
-    """Summarize where the difference to the reference comes from, without presuming a direction."""
+    """summarize where the difference to the reference comes from, without presuming a direction."""
     if len(deltas) < 2:
         return (
             f"Only task {per_task[0]['task_id']} was evaluated ({deltas[0]:+.1f} points versus its "
@@ -262,7 +262,7 @@ def describe_per_task_spread(per_task: list[dict[str, Any]], deltas: list[float]
 
 
 def build_diagnostics(config: dict[str, Any], result: dict[str, Any], comparable: bool) -> dict[str, Any]:
-    """Derive the status and the diagnosis bullets from the measured result only."""
+    """derive the status and the diagnosis bullets from the measured result only."""
     target = config["target"]
     reference = target["reference_success_percent"]
     threshold = target["material_difference_percentage_points"]
@@ -316,7 +316,7 @@ def build_diagnostics(config: dict[str, Any], result: dict[str, Any], comparable
 
 
 class Tolerant(dict):
-    """Dict view that renders missing keys as 'n/a' so older metrics files still report."""
+    """dict view that renders missing keys as 'n/a' so older metrics files still report."""
 
     def __getitem__(self, key: str) -> Any:
         return super().get(key, "n/a")
@@ -350,7 +350,7 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
     rows = [
         f"# {title}",
         "",
-        f"**Status: {status_text} — {result['successes']}/{result['episodes']} successes "
+        f"**Status: {status_text} -- {result['successes']}/{result['episodes']} successes "
         f"({result['overall_success_percent']:.1f}%).** Reference: "
         f"~{target['reference_success_percent']:.1f}% (delta {delta:+.1f} points).",
         "",
@@ -400,8 +400,10 @@ def write_report(metrics: dict[str, Any], path: Path) -> None:
             *([semantic_report_line(metrics["semantic_control"])] if metrics.get("semantic_control") else []),
             *(
                 [
-                    f"- Policy kind: `{metrics['policy_kind']}`; semantic control active: {metrics['semantic_control_active']}; "
-                    f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."
+                    f"- Policy kind: `{metrics['policy_kind']}`; "
+                    f"semantic control active: {metrics['semantic_control_active']}; "
+                    f"config SHA-256 `{metrics['fingerprints']['config_sha256'][:16]}`; "
+                    f"protocol SHA-256 `{metrics['fingerprints']['protocol_sha256'][:16]}`."
                 ]
                 if metrics.get("policy_kind")
                 else []
@@ -438,7 +440,7 @@ def report_block(config: dict[str, Any], semantic_info: dict[str, Any] | None) -
         preset = semantic_info["control"].get("preset") or semantic_info["control"]["semantic_layers"]
         step = semantic_info.get("checkpoint_metadata", {}).get("step")
         suffix = f"preset {preset}" + (f" @ step {step}" if step is not None else "")
-        block["title"] = f"{block.get('title', 'SmolVLA evaluation')} — {suffix}"
+        block["title"] = f"{block.get('title', 'SmolVLA evaluation')} -- {suffix}"
     return block
 
 
@@ -463,7 +465,7 @@ def rerender(args: argparse.Namespace) -> int:
     metrics = json.loads(args.rerender.resolve().read_text())
     comparable = is_baseline_protocol(config, metrics["eval_settings"])
     metrics["target"] = config["target"]
-    metrics["report"] = config.get("report", {})
+    metrics["report"] = report_block(config, metrics.get("semantic_control"))
     metrics["diagnostics"] = build_diagnostics(config, metrics["result"], comparable)
     metrics["status"] = metrics["diagnostics"].pop("status")
     report_path = args.report.resolve()
@@ -492,7 +494,7 @@ def main() -> int:
     if episodes < 1 or batch_size < 1 or batch_size > episodes:
         raise ValueError("Require episodes >= batch_size >= 1")
 
-    # Imports happen after renderer/thread environment variables are fixed.
+    # imports happen after renderer/thread environment variables are fixed.
     import torch  # noqa: I001 - keep the pinned import order (libero before lerobot)
     from libero.libero import benchmark
     from lerobot.configs.policies import PreTrainedConfig
@@ -755,7 +757,7 @@ def main() -> int:
         "fingerprints": {
             "model_sha256": sha256_file(model_file),
             "config_sha256": sha256_file(policy_path / "config.json"),
-            "protocol_sha256": None,  # filled below from eval_settings
+            "protocol_sha256": None,  # filled below from `eval_settings`
         },
         "revisions": {
             "checkpoint": (

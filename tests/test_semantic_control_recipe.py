@@ -1,5 +1,5 @@
-"""CPU tests for the save/restore contract: routing verification by observation, fingerprints,
-the guarded loader, and the training-wrapper hooks (tiny random SmolVLA, no dataset)."""
+"""cpu tests for the save/restore contract: routing verification by observation, fingerprints,
+the guarded loader, and the training-wrapper hooks (tiny random smolvla, no dataset)."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class RecipeTests(unittest.TestCase):
             copy.deepcopy(self.base_policy), sc.SemanticControlConfig.from_preset(preset)
         )
 
-    # -- verification by observation -------------------------------------------------------------
+    # -- verification by observation ---------------------------------------------------------------
 
     def test_verify_routing_accepts_every_preset(self):
         for preset in sc.PRESETS:
@@ -68,7 +68,7 @@ class RecipeTests(unittest.TestCase):
         with self.assertRaises(sc.RoutingError):
             sc.verify_routing(frozen_wrong)
 
-    # -- fingerprints ----------------------------------------------------------------------------
+    # -- fingerprints ------------------------------------------------------------------------------
 
     def test_fingerprints_identify_identical_initialization(self):
         same = helpers.make_tiny_policy(self.tiny_dir, seed=0)
@@ -79,7 +79,7 @@ class RecipeTests(unittest.TestCase):
         self.assertEqual(len(set(fingerprints.values())), 1)  # routing/trainability never touch weights
         self.assertEqual(sc.vlm_fingerprint(self.base_policy), sc.vlm_fingerprint(self.policy_for("D")))
 
-    # -- guarded loading -------------------------------------------------------------------------
+    # -- guarded loading ---------------------------------------------------------------------------
 
     def _save(self, policy, directory: Path):
         policy.save_pretrained(directory)
@@ -113,7 +113,7 @@ class RecipeTests(unittest.TestCase):
             same = sc.load_policy_with_control(directory, sc.SemanticControlConfig.from_preset("C"), device="cpu")
             self.assertEqual(same[1].preset, "C")
 
-    # -- training wrapper ------------------------------------------------------------------------
+    # -- training wrapper --------------------------------------------------------------------------
 
     def test_parse_semantic_args(self):
         control, args, rest = train_semantic.parse_semantic_args(
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
 
 class PilotHookTests(unittest.TestCase):
-    """Two-LR parameter groups, save_at/stop_at control, and fp32-dtype round trips (tiny model)."""
+    """two-lr parameter groups, ``save_at``/``stop_at`` control, and fp32-dtype round trips (tiny model)."""
 
     @classmethod
     def setUpClass(cls):
@@ -234,7 +234,7 @@ class PilotHookTests(unittest.TestCase):
         self.assertEqual(control.preset, "B")
         self.assertEqual(args.vlm_lr, 1e-5)
         self.assertEqual(args.stop_at, 5000)
-        self.assertEqual(args.save_at, [2000, 5000, 10000])  # stop_at is always saved
+        self.assertEqual(args.save_at, [2000, 5000, 10000])  # `stop_at` is always saved
         self.assertEqual(rest, ["--steps=30000"])
 
     def test_fp32_masters_survive_save_and_reload(self):
@@ -243,7 +243,7 @@ class PilotHookTests(unittest.TestCase):
         with torch.no_grad():
             for p in policy.parameters():
                 if p.requires_grad:
-                    p.add_(1e-5)  # a perturbation below bf16 resolution for O(1) weights
+                    p.add_(1e-5)  # a perturbation below bf16 resolution for order-one weights
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp) / "pretrained_model"
             policy.save_pretrained(directory)
@@ -288,7 +288,7 @@ class PilotHookTests(unittest.TestCase):
                 train_semantic.STATE["step"] = 1
                 module.save_checkpoint(Path(tmp) / "000001", 1, cfg, policy, optimizer, None)
                 module.update_last_checkpoint(Path(tmp) / "000001")
-                self.assertEqual(calls, [])  # step 1 not in save_at -> skipped, link not updated
+                self.assertEqual(calls, [])  # step 1 not in `save_at` -> skipped, link not updated
                 self.assertEqual(links, [])
                 (Path(tmp) / "000001" / "training_state").mkdir(parents=True)
                 (Path(tmp) / "000001" / "training_state" / "optimizer_state.safetensors").write_bytes(b"x")

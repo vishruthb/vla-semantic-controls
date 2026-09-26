@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""Train SmolVLA with a semantic-control preset through LeRobot's official training loop.
+"""train smolvla with a semantic-control preset through lerobot's official training loop.
 
     python src/train_semantic.py --semantic.preset C [any lerobot-train arguments ...]
 
-The ``--semantic.*`` arguments are consumed here; everything else is handed verbatim to
-``lerobot.scripts.lerobot_train.train``. Hooks installed on that module:
+the ``--semantic.*`` arguments are consumed here; everything else is handed verbatim to
+``lerobot.scripts.lerobot_train.train``. hooks installed on that module:
 
-* ``make_policy`` — after LeRobot builds the policy, install the semantic control, optionally hold
+* ``make_policy``: after lerobot builds the policy, install the semantic control, optionally hold
   trainable blocks in fp32 (master weights), verify the routing by observation, record fingerprints,
-  and give the optimizer two parameter groups (expert lr, VLM lr) when the VLM trains.
-* ``make_optimizer_and_scheduler`` — register a step pre-hook that records per-group gradient norms.
-* ``update_policy`` — record loss / lr / step time / peak memory for every step (training curve).
-* ``save_checkpoint`` / ``update_last_checkpoint`` — keep only the steps in ``--semantic.save_at``,
+  and give the optimizer two parameter groups (expert lr, vlm lr) when the vlm trains.
+* ``make_optimizer_and_scheduler``: register a step pre-hook that records per-group gradient norms.
+* ``update_policy``: record loss / lr / step time / peak memory for every step (training curve).
+* ``save_checkpoint`` / ``update_last_checkpoint``: keep only the steps in ``--semantic.save_at``,
   write ``semantic_control.json`` (control + fingerprints + training metrics) into every kept
   checkpoint, append the curve to ``semantic_train_log.jsonl``, and stop the process cleanly at
-  ``--semantic.stop_at`` so a fixed LR horizon (``--steps``) can be trained in stages.
+  ``--semantic.stop_at`` so a fixed lr horizon (``--steps``) can be trained in stages.
 
-``--semantic.trainable_fp32 true`` keeps *trainable* parameters in float32 — pair it with
-``ACCELERATE_MIXED_PRECISION=bf16`` for bf16 autocast. Required for small VLM learning rates: bf16
-weights cannot represent 1e-5-relative updates.
+``--semantic.trainable_fp32 true`` keeps *trainable* parameters in float32; pair it with
+``ACCELERATE_MIXED_PRECISION=bf16`` for bf16 autocast. this is required for small vlm learning rates:
+bf16 weights cannot represent 1e-5-relative updates.
 """
 
 from __future__ import annotations
@@ -97,14 +97,14 @@ def parse_semantic_args(argv: list[str]) -> tuple[sc.SemanticControlConfig, argp
 
 
 # --------------------------------------------------------------------------------------------
-# Policy preparation
+# policy preparation
 # --------------------------------------------------------------------------------------------
 
 
 def cast_trainable_to_fp32(policy) -> int:
-    """Keep every trainable parameter in float32 (master weights); frozen modules stay as loaded.
+    """keep every trainable parameter in float32 (master weights); frozen modules stay as loaded.
 
-    Whole blocks are cast (not individual parameters): upstream casts activations to the dtype of a
+    whole blocks are cast (not individual parameters): upstream casts activations to the dtype of a
     sibling weight (e.g. `q_proj`) before applying `k_proj`, so a block must be dtype-homogeneous.
     """
     model = policy.model
@@ -134,7 +134,7 @@ def cast_trainable_to_fp32(policy) -> int:
 
 
 def parameter_groups(policy, vlm_lr: float) -> list[dict[str, Any]]:
-    """Expert/projections at the optimizer's default lr; VLM parameters (when trainable) at ``vlm_lr``."""
+    """expert/projections at the optimizer's default lr; vlm parameters (when trainable) at ``vlm_lr``."""
     expert, vlm = [], []
     for name, parameter in policy.named_parameters():
         if not parameter.requires_grad:
@@ -162,7 +162,7 @@ def provenance() -> dict[str, Any]:
 
 
 def resumed_metadata(pretrained_path) -> dict[str, Any] | None:
-    """When resuming, read the control file of the checkpoint being resumed."""
+    """when resuming, read the control file of the checkpoint being resumed."""
     if not pretrained_path:
         return None
     control_file = Path(pretrained_path) / sc.SEMANTIC_CONTROL_FILE
@@ -183,7 +183,7 @@ def nvidia_smi_used_mib() -> int | None:
 
 
 # --------------------------------------------------------------------------------------------
-# Hooks
+# hooks
 # --------------------------------------------------------------------------------------------
 
 
@@ -194,7 +194,7 @@ def install_hooks(
     stop_at: int | None = None,
     save_at: list[int] | None = None,
 ):
-    """Patch LeRobot's training module. Returns the module and the original callables."""
+    """patch lerobot's training module. returns the module and the original callables."""
     import lerobot.scripts.lerobot_train as train_module
 
     originals = {
@@ -378,7 +378,7 @@ def install_hooks(
             "step": step,
         }
         path = sc.save_semantic_control(control, Path(checkpoint_dir) / PRETRAINED_MODEL_DIR, metadata)
-        # Resume only ever uses the newest checkpoint: drop earlier optimizer/RNG states to bound disk use.
+        # resume only ever uses the newest checkpoint: drop earlier optimizer/rng states to bound disk use.
         import shutil
 
         for earlier in sorted(Path(checkpoint_dir).parent.glob("[0-9]*")):
@@ -413,9 +413,9 @@ def remove_hooks(train_module, originals: dict[str, Any]) -> None:
 
 
 def patch_subset_indexing() -> None:
-    """LeRobot @8515d45: `EpisodeAwareSampler` yields absolute frame indices, but with an episode
+    """lerobot @8515d45: `EpisodeAwareSampler` yields absolute frame indices, but with an episode
     subset the reader's `get_item` expects indices relative to the filtered table (they coincide only
-    for the full dataset). Apply the reader's own absolute->relative map in `__getitem__`."""
+    for the full dataset). apply the reader's own absolute->relative map in `__getitem__`."""
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     if getattr(LeRobotDataset, "_semantic_subset_patch", False):

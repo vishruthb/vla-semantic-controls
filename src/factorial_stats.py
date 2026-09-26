@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Episode-clustered 2x2 factorial statistics for the matched A/B/C/D evaluation.
+"""episode-clustered 2x2 factorial statistics for the matched A/B/C/D evaluation.
 
-Every matched LIBERO episode i (same task, init state, env seed, flow-matching noise) has one
-outcome under each configuration: (A_i, B_i, C_i, D_i). All resampling keeps those tuples intact.
+every matched libero episode (same task, init state, env seed, flow-matching noise) has one
+outcome under each configuration, giving one (A, B, C, D) outcome tuple per episode. all resampling
+keeps those tuples intact.
 
-Effects (per episode, then averaged):
-  VLM-update main  = ((B - A) + (D - C)) / 2
+effects (per episode, then averaged):
+  vlm-update main  = ((B - A) + (D - C)) / 2
   routing main     = ((C - A) + (D - B)) / 2
   interaction      = (D - C) - (B - A) = (D - B) - (C - A)
 
-Primary interval: task-stratified episode bootstrap (within each task resample its episodes with
-replacement; 20,000 replicates; percentile 95% CI). Sensitivity: task-cluster bootstrap (resample
-the 10 tasks with replacement) — only 10 clusters, so a robustness check, not the primary interval.
-Secondary p-values: paired sign-flip permutation test on the per-episode effect values.
+primary interval: task-stratified episode bootstrap (within each task, resample its episodes with
+replacement; 20,000 replicates by default; percentile 95% ci). sensitivity: task-cluster bootstrap
+(resample the 10 tasks with replacement); with only 10 clusters this is a robustness check, not the
+primary interval. secondary p-values: paired sign-flip permutation test on the per-episode effect values.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ PRESETS = "ABCD"
 def load_tuples(
     results_dir: Path, step: int, episodes: int, suffix: str
 ) -> tuple[np.ndarray, list[int], list[tuple[int, int]]]:
-    """Return outcomes[task, episode, preset] (0/1), the task ids, and the episode keys."""
+    """return outcomes[task, episode, preset] (0/1), the task ids, and the episode keys."""
     keys_ref, columns = None, []
     for preset in PRESETS:
         metrics = json.loads((results_dir / f"{preset}_{step:05d}_e{episodes}{suffix}.json").read_text())
@@ -56,7 +57,7 @@ def load_tuples(
 
 
 def effects(t: np.ndarray) -> dict[str, float]:
-    """Point estimates in percentage points from an array (..., 4) of A,B,C,D outcomes."""
+    """point estimates in percentage points from an array (..., 4) of A, B, C, D outcomes."""
     a, b, c, d = (t[..., i].astype(float) for i in range(4))
     return {
         "B_minus_A": 100 * (b - a).mean(),
@@ -95,7 +96,8 @@ def percentile_ci(values: np.ndarray) -> list[float]:
 
 
 def sign_flip_p(per_episode: np.ndarray, reps: int, seed: int) -> float:
-    """Two-sided paired permutation test: under H0 the sign of each episode's effect is exchangeable."""
+    """two-sided paired permutation test: under the null hypothesis the sign of each episode's effect
+    is exchangeable."""
     rng = np.random.default_rng(seed)
     observed = abs(per_episode.mean())
     flips = rng.choice([-1.0, 1.0], size=(reps, per_episode.size))
@@ -132,7 +134,7 @@ def main() -> int:
     }
     paired = {}
     for name, (x, y) in {"B_minus_A": (a, b), "D_minus_C": (c, d), "C_minus_A": (a, c), "D_minus_B": (b, d)}.items():
-        s = ep.paired_stats(x.astype(int), y.astype(int), n_boot=1000, seed=args.seed)  # wins/losses/ties + McNemar
+        s = ep.paired_stats(x.astype(int), y.astype(int), n_boot=1000, seed=args.seed)  # wins/losses/ties + mcnemar
         paired[name] = {
             "delta_points": point[name],
             "wins": s["wins"],
@@ -197,11 +199,13 @@ def main() -> int:
     ):
         f = report["factorial_effects"][name]
         lines.append(
-            f"| {label} | {f['points']:+.2f} | {fmt(f['episode_stratified_ci95'])} | {fmt(f['task_cluster_ci95'])} | {f['sign_flip_permutation_p']:.3f} |"
+            f"| {label} | {f['points']:+.2f} | {fmt(f['episode_stratified_ci95'])} "
+            f"| {fmt(f['task_cluster_ci95'])} | {f['sign_flip_permutation_p']:.3f} |"
         )
     lines += [
         "",
-        "| paired contrast | points | wins / losses / ties | McNemar p | episode-stratified 95% CI | task-cluster 95% CI |",
+        "| paired contrast | points | wins / losses / ties | McNemar p "
+        "| episode-stratified 95% CI | task-cluster 95% CI |",
         "| --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     for name, label in (
@@ -212,11 +216,13 @@ def main() -> int:
     ):
         p = paired[name]
         lines.append(
-            f"| {label} | {p['delta_points']:+.1f} | {p['wins']} / {p['losses']} / {p['ties']} | {p['mcnemar_p']:.3f} | {fmt(p['episode_stratified_ci95'])} | {fmt(p['task_cluster_ci95'])} |"
+            f"| {label} | {p['delta_points']:+.1f} | {p['wins']} / {p['losses']} / {p['ties']} "
+            f"| {p['mcnemar_p']:.3f} | {fmt(p['episode_stratified_ci95'])} | {fmt(p['task_cluster_ci95'])} |"
         )
     lines += [
         "",
-        f"Within-episode correlation of the two VLM-update contrasts corr(B−A, D−C) = {corr_vlm:+.3f}; of the two routing contrasts corr(C−A, D−B) = {corr_routing:+.3f}.",
+        f"Within-episode correlation of the two VLM-update contrasts corr(B−A, D−C) = {corr_vlm:+.3f}; "
+        f"of the two routing contrasts corr(C−A, D−B) = {corr_routing:+.3f}.",
         "",
         "Per-task effects (points, 20 episodes each):",
         "",
@@ -225,7 +231,9 @@ def main() -> int:
     ]
     for row in per_task:
         lines.append(
-            f"| {row['task_id']} | {row['success_A']:.0f} | {row['success_B']:.0f} | {row['success_C']:.0f} | {row['success_D']:.0f} | {row['vlm_update_main']:+.1f} | {row['routing_main']:+.1f} | {row['interaction']:+.1f} |"
+            f"| {row['task_id']} | {row['success_A']:.0f} | {row['success_B']:.0f} | {row['success_C']:.0f} "
+            f"| {row['success_D']:.0f} | {row['vlm_update_main']:+.1f} | {row['routing_main']:+.1f} "
+            f"| {row['interaction']:+.1f} |"
         )
     (args.results_dir / f"{args.out}.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))

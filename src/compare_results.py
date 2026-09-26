@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Matched episode-level comparison of two evaluation results (same protocol), with context rows.
+r"""matched episode-level comparison of two evaluation results (same protocol), with context rows.
 
     python src/compare_results.py --reference results/pilot/released_smolvla_matched_e20.json \
         --candidate results/pilot/B_30000_e20_matched.json --context A,B,C,D:30000 \
@@ -57,7 +57,7 @@ def main() -> int:
         e = m["eval_settings"]
         if not e.get("deterministic_noise", {}).get("enabled"):
             raise RuntimeError(f"{name}: not evaluated with the deterministic matched protocol")
-    # Protocol fingerprint computed uniformly from the recorded eval_settings (older result files
+    # protocol fingerprint computed uniformly from the recorded `eval_settings` (older result files
     # predate the stored `fingerprints` field); identical settings -> identical digest.
     import hashlib
 
@@ -128,9 +128,10 @@ def main() -> int:
     args.out.with_suffix(".json").write_text(json.dumps(report, indent=1))
     ci = stats["paired_bootstrap_ci95_points"]
     lines = [
-        f"# {args.candidate_label} vs {args.reference_label} — matched {n}-episode LIBERO-Spatial protocol",
+        f"# {args.candidate_label} vs {args.reference_label} -- matched {n}-episode LIBERO-Spatial protocol",
         "",
-        f"Protocol fingerprints: reference `{str(protocol['reference'])[:16]}`, candidate `{str(protocol['candidate'])[:16]}` "
+        f"Protocol fingerprints: reference `{str(protocol['reference'])[:16]}`, "
+        f"candidate `{str(protocol['candidate'])[:16]}` "
         f"({'identical' if protocol['reference'] == protocol['candidate'] else 'DIFFERENT'}).",
         "",
         "| policy | successes | success | Wilson 95% CI | per-task (of 20) |",
@@ -138,7 +139,8 @@ def main() -> int:
     ]
     for row in rows + context:
         lines.append(
-            f"| {row['label']} | {row['successes']}/{row['episodes']} | {row['percent']:.1f}% | [{row['wilson95'][0]:.1f}, {row['wilson95'][1]:.1f}] | {row['per_task']} |"
+            f"| {row['label']} | {row['successes']}/{row['episodes']} | {row['percent']:.1f}% "
+            f"| [{row['wilson95'][0]:.1f}, {row['wilson95'][1]:.1f}] | {row['per_task']} |"
         )
     rel = f"{stats['relative_delta_percent']:+.1f}%" if stats["relative_delta_percent"] is not None else "n/a"
     lines += [

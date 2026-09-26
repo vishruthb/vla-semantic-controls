@@ -1,8 +1,8 @@
-"""GPU integration tests for the semantic-control interface on the real pinned SmolVLA checkpoint.
+"""gpu integration tests for the semantic-control interface on the real pinned smolvla checkpoint.
 
-Builds the native policy and presets A-D from ``lerobot/smolvla_base`` on CUDA, runs fixed-input /
+builds the native policy and presets A-D from ``lerobot/smolvla_base`` on cuda, runs fixed-input,
 fixed-noise forward passes plus one backward pass each, and checks the routing, gradient reach,
-numerical equivalence of A with upstream, and well-formedness of all outputs. No LIBERO episodes,
+numerical equivalence of A with upstream, and well-formedness of all outputs. no libero episodes,
 no optimizer steps.
 """
 
@@ -26,7 +26,7 @@ def _snapshots():
             sc.resolve_snapshot(checkpoint["repository"], checkpoint["revision"]),
             sc.resolve_snapshot(checkpoint["backbone_repository"], checkpoint["backbone_revision"]),
         )
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - checkpoint not cached means the gpu tests are skipped
         return None
 
 
@@ -123,7 +123,7 @@ class RealCheckpointTests(unittest.TestCase):
         )
         return summary
 
-    # -- structure ----------------------------------------------------------------------------
+    # -- structure ---------------------------------------------------------------------------------
 
     def test_state_dict_matches_checkpoint(self):
         for preset, summary in self.summaries.items():
@@ -137,7 +137,7 @@ class RealCheckpointTests(unittest.TestCase):
         self.assertEqual(self.summaries["C"]["coupled_layers"], list(range(1, 16, 2)))
         self.assertEqual(self.summaries["D"]["coupled_layers"], list(range(1, 16, 2)))
 
-    # -- numerics -----------------------------------------------------------------------------
+    # -- numerics ----------------------------------------------------------------------------------
 
     def test_all_frozen_is_numerically_native(self):
         native, a = self.native, self.summaries["A"]
@@ -178,7 +178,7 @@ class RealCheckpointTests(unittest.TestCase):
         suffix_len = 50
         for all_preset, cross_preset in (("A", "C"), ("B", "D")):
             a, c = self.summaries[all_preset], self.summaries[cross_preset]
-            # VLM stream identical: the KV cache produced by the prefix-only pass is bitwise equal
+            # vlm stream identical: the kv cache produced by the prefix-only pass is bitwise equal
             self.assertEqual(a["kv_cache"].keys(), c["kv_cache"].keys())
             for layer, (k_a, v_a) in a["kv_cache"].items():
                 self.assertTrue(torch.equal(k_a, c["kv_cache"][layer][0]), (all_preset, layer))
@@ -230,7 +230,7 @@ class RealCheckpointTests(unittest.TestCase):
             self.assertFalse(torch.equal(a["loss"], c["loss"]), (all_preset, cross_preset))
             self.assertFalse(torch.equal(a["actions"], c["actions"]), (all_preset, cross_preset))
 
-    # -- gradients ----------------------------------------------------------------------------
+    # -- gradients ---------------------------------------------------------------------------------
 
     def test_update_vlm_false_gives_no_vlm_gradients(self):
         for preset in ("A", "C"):
@@ -302,16 +302,19 @@ class RealCheckpointTests(unittest.TestCase):
         print("\n\nParameter counts (lerobot/smolvla_base):")
         for preset, report in reports.items():
             print(
-                f"\n[{preset}] {self.summaries[preset]['control'].to_dict()}  coupled layers: {self.summaries[preset]['coupled_layers']}"
+                f"\n[{preset}] {self.summaries[preset]['control'].to_dict()}  "
+                f"coupled layers: {self.summaries[preset]['coupled_layers']}"
             )
             print(sc.format_parameter_report(report))
         print("\nLosses / action checksums:")
         for preset, summary in self.summaries.items():
             print(
-                f"  {preset}: loss={summary['loss'].item():.6f} actions.abs().sum()={summary['actions'].abs().sum().item():.4f}"
+                f"  {preset}: loss={summary['loss'].item():.6f} "
+                f"actions.abs().sum()={summary['actions'].abs().sum().item():.4f}"
             )
         print(
-            f"  native: loss={self.native['loss'].item():.6f} actions.abs().sum()={self.native['actions'].abs().sum().item():.4f}"
+            f"  native: loss={self.native['loss'].item():.6f} "
+            f"actions.abs().sum()={self.native['actions'].abs().sum().item():.4f}"
         )
 
 
